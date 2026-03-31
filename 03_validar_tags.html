@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>P&ID — Validar TAGs</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#0c0e14;--s1:#13161f;--s2:#1a1e2b;--s3:#222637;
+  --border:#252a3a;--border2:#333b52;
+  --teal:#00c9a7;--teal-lo:#00c9a712;--teal-mi:#00c9a730;
+  --amber:#f0a500;--amber-lo:#f0a50015;--amber-mi:#f0a50040;
+  --red:#ff4d6d;--red-lo:#ff4d6d15;--red-mi:#ff4d6d40;
+  --green:#22c55e;--green-lo:#22c55e12;--green-mi:#22c55e35;
+  --purple:#7f77dd;--purple-lo:#7f77dd12;--purple-mi:#7f77dd35;
+  --txt:#dde3f0;--txt2:#7c87a0;--txt3:#424d64;
+  --mono:'IBM Plex Mono',monospace;--sans:'Syne',sans-serif;
+  --r:10px;--rlg:16px;
+}
+body{font-family:var(--sans);background:var(--bg);color:var(--txt);min-height:100vh;}
+body::before{
+  content:'';position:fixed;inset:0;
+  background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);
+  background-size:48px 48px;opacity:.2;pointer-events:none;z-index:0;
+}
+
+header{
+  background:var(--s1);border-bottom:1px solid var(--border);
+  padding:0 2rem;height:56px;display:flex;align-items:center;
+  justify-content:space-between;position:sticky;top:0;z-index:100;
+}
+.logo{display:flex;align-items:center;gap:10px;}
+.logo-mark{
+  width:30px;height:30px;background:var(--teal);border-radius:7px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:9px;font-weight:600;color:#0c0e14;line-height:1.2;text-align:center;
+}
+.breadcrumb{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--txt2);}
+.breadcrumb a{color:var(--txt2);text-decoration:none;transition:color .15s;}
+.breadcrumb a:hover{color:var(--txt);}
+.breadcrumb span{color:var(--txt3);}
+.breadcrumb strong{color:var(--green);}
+.back-btn{
+  display:flex;align-items:center;gap:6px;padding:7px 14px;
+  border-radius:var(--r);border:1px solid var(--border);
+  background:transparent;color:var(--txt2);font-family:var(--sans);
+  font-size:13px;cursor:pointer;text-decoration:none;transition:all .15s;
+}
+.back-btn:hover{background:var(--s2);color:var(--txt);}
+
+main{max-width:1000px;margin:0 auto;padding:2rem 2rem 5rem;position:relative;z-index:1;}
+.page-title{font-size:24px;font-weight:800;letter-spacing:-.5px;margin-bottom:4px;}
+.page-sub{font-size:14px;color:var(--txt2);margin-bottom:2rem;}
+
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.5rem;}
+.stat-box{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:10px 14px;text-align:center;}
+.stat-num{font-family:var(--mono);font-size:22px;font-weight:600;display:block;}
+.stat-lbl{font-size:10px;color:var(--txt2);font-family:var(--mono);letter-spacing:.5px;}
+.stat-box.c-teal .stat-num{color:var(--teal);}
+.stat-box.c-green .stat-num{color:var(--green);}
+.stat-box.c-red .stat-num{color:var(--red);}
+.stat-box.c-amber .stat-num{color:var(--amber);}
+
+/* TOOLBAR */
+.toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;gap:1rem;flex-wrap:wrap;}
+.toolbar-left{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.toolbar-label{font-size:12px;color:var(--txt3);font-family:var(--mono);}
+
+/* FILTER TABS */
+.filter-tabs{display:flex;gap:6px;}
+.filter-tab{
+  padding:5px 14px;border-radius:20px;border:1px solid var(--border2);
+  background:transparent;color:var(--txt2);font-size:12px;
+  cursor:pointer;transition:all .15s;font-family:var(--sans);
+}
+.filter-tab:hover{background:var(--s2);color:var(--txt);}
+.filter-tab.active{background:var(--teal-lo);border-color:var(--teal-mi);color:var(--teal);}
+
+/* QUICK ACTIONS */
+.qa-btn{
+  padding:6px 14px;border-radius:var(--r);border:1px solid var(--border2);
+  background:transparent;color:var(--txt2);font-size:12px;
+  cursor:pointer;font-family:var(--sans);transition:all .15s;
+}
+.qa-btn:hover{background:var(--s2);color:var(--txt);}
+.qa-btn.green{border-color:var(--green-mi);color:var(--green);}
+.qa-btn.green:hover{background:var(--green-lo);}
+.qa-btn.red{border-color:var(--red-mi);color:var(--red);}
+.qa-btn.red:hover{background:var(--red-lo);}
+
+/* SEARCH */
+.search-wrap{position:relative;}
+.search-input{
+  background:var(--s1);border:1px solid var(--border2);border-radius:var(--r);
+  padding:7px 12px 7px 34px;color:var(--txt);font-family:var(--sans);font-size:13px;
+  outline:none;transition:border-color .15s;width:200px;
+}
+.search-input:focus{border-color:var(--teal);}
+.search-input::placeholder{color:var(--txt3);}
+.search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--txt3);font-size:14px;pointer-events:none;}
+
+/* TAG LIST */
+.tag-list{display:flex;flex-direction:column;gap:8px;margin-bottom:1.5rem;}
+
+.tag-row{
+  background:var(--s1);border:1px solid var(--border);border-radius:var(--rlg);
+  padding:.9rem 1.1rem;display:flex;align-items:center;gap:14px;transition:all .18s;
+}
+.tag-row:hover{border-color:var(--border2);}
+.tag-row.accepted{border-color:var(--green-mi);background:var(--green-lo);}
+.tag-row.rejected{border-color:var(--red-mi);background:var(--red-lo);opacity:.5;}
+.tag-row.manual-row{border-color:var(--amber-mi);border-style:dashed;}
+.tag-row.hidden{display:none;}
+
+.tag-main{flex:1;min-width:0;}
+.tag-code{
+  font-family:var(--mono);font-size:15px;font-weight:600;color:var(--teal);
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+}
+.tag-row.accepted .tag-code{color:var(--green);}
+.tag-row.rejected .tag-code{color:var(--red);}
+.tag-row.manual-row .tag-code{color:var(--amber);}
+
+.tag-badge{font-size:9px;font-family:var(--mono);padding:2px 7px;border-radius:3px;letter-spacing:.5px;}
+.badge-manual{background:var(--amber-lo);color:var(--amber);border:1px solid var(--amber-mi);}
+.badge-vision{background:var(--teal-lo);color:var(--teal);border:1px solid var(--teal-mi);}
+.badge-dxf{background:var(--purple-lo);color:var(--purple);border:1px solid var(--purple-mi);}
+.badge-template{background:var(--green-lo);color:var(--green);border:1px solid var(--green-mi);}
+.badge-no-template{background:var(--amber-lo);color:var(--amber);border:1px solid var(--amber-mi);}
+
+.tag-info{font-size:12px;color:var(--txt2);margin-top:3px;}
+.tag-area{font-family:var(--mono);font-size:10px;color:var(--txt3);margin-top:3px;}
+
+.tag-specs{
+  display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;
+}
+.spec-chip{
+  font-family:var(--mono);font-size:10px;padding:2px 8px;border-radius:4px;
+  background:var(--s3);color:var(--txt2);border:1px solid var(--border);
+}
+
+.tag-actions{display:flex;gap:6px;flex-shrink:0;}
+.vc-btn{
+  width:38px;height:38px;border-radius:var(--r);border:1.5px solid;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:16px;transition:all .15s;background:transparent;
+}
+.vc-btn.y{border-color:var(--green-mi);color:var(--green);}
+.vc-btn.y:hover,.vc-btn.y.on{background:var(--green-mi);border-color:var(--green);}
+.vc-btn.n{border-color:var(--red-mi);color:var(--red);}
+.vc-btn.n:hover,.vc-btn.n.on{background:var(--red-lo);border-color:var(--red);}
+
+/* ADD MANUAL */
+.add-manual{
+  background:var(--s2);border:1.5px dashed var(--border2);
+  border-radius:var(--rlg);padding:1.25rem;margin-bottom:1.5rem;
+}
+.add-title{font-size:13px;font-weight:700;color:var(--txt2);margin-bottom:12px;}
+.add-grid{display:grid;grid-template-columns:100px 1fr 1fr 1fr auto;gap:8px;align-items:end;}
+.add-fld{display:flex;flex-direction:column;gap:4px;}
+.add-lbl{font-size:10px;color:var(--txt3);font-family:var(--mono);letter-spacing:.5px;}
+.add-input,.add-sel{
+  background:var(--bg);border:1px solid var(--border2);border-radius:var(--r);
+  padding:9px 12px;color:var(--txt);font-family:var(--mono);font-size:12px;
+  outline:none;transition:border-color .15s;width:100%;
+}
+.add-input:focus,.add-sel:focus{border-color:var(--teal);}
+.add-input::placeholder{color:var(--txt3);}
+.add-sel{appearance:none;cursor:pointer;}
+.add-btn{
+  padding:9px 16px;border-radius:var(--r);border:1px solid var(--teal-mi);
+  background:var(--teal-lo);color:var(--teal);font-family:var(--sans);
+  font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap;
+}
+.add-btn:hover{background:var(--teal-mi);}
+
+/* EMPTY */
+.empty-state{
+  text-align:center;padding:4rem 2rem;color:var(--txt3);
+  background:var(--s1);border:1px solid var(--border);border-radius:var(--rlg);
+}
+.empty-icon{font-size:40px;display:block;margin-bottom:1rem;opacity:.3;}
+.empty-title{font-size:16px;font-weight:600;color:var(--txt2);margin-bottom:6px;}
+
+/* FOOTER */
+.val-footer{
+  display:flex;align-items:center;justify-content:space-between;gap:1rem;
+  padding:1.25rem 1.5rem;background:var(--s1);border:1px solid var(--border);
+  border-radius:var(--rlg);flex-wrap:wrap;
+}
+.footer-hint{font-size:13px;color:var(--txt2);}
+.footer-hint strong{color:var(--green);}
+.footer-hint.warn strong{color:var(--amber);}
+.footer-btns{display:flex;gap:10px;}
+
+.btn-primary{
+  padding:11px 28px;border-radius:var(--r);border:none;
+  background:var(--teal);color:#0c0e14;font-family:var(--sans);
+  font-size:14px;font-weight:700;cursor:pointer;transition:filter .15s;
+}
+.btn-primary:hover{filter:brightness(1.08);}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed;filter:none;}
+.btn-primary.green{background:var(--green);}
+.btn-secondary{
+  padding:11px 22px;border-radius:var(--r);border:1px solid var(--border2);
+  background:transparent;color:var(--txt2);font-family:var(--sans);
+  font-size:14px;cursor:pointer;transition:all .15s;
+}
+.btn-secondary:hover{background:var(--s2);color:var(--txt);}
+
+::-webkit-scrollbar{width:5px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+@media(max-width:640px){
+  .add-grid{grid-template-columns:1fr 1fr;}
+  .stats-row{grid-template-columns:1fr 1fr;}
+  main{padding:1.5rem 1rem 4rem;}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-mark">P&amp;<br>ID</div>
+    <div class="breadcrumb">
+      <a href="index.html">Inicio</a>
+      <span>›</span>
+      <a href="02_subir_pid.html">Analizar P&ID</a>
+      <span>›</span>
+      <strong>Módulo 03 — Validar TAGs</strong>
+    </div>
+  </div>
+  <a href="02_subir_pid.html" class="back-btn">← Re-analizar</a>
+</header>
+
+<main>
+  <div class="page-title">Validar TAGs</div>
+  <div class="page-sub">Revisa los TAGs detectados. Acepta los que reconoces, rechaza los incorrectos y agrega los que falten.</div>
+
+  <!-- STATS -->
+  <div class="stats-row">
+    <div class="stat-box c-teal"><span class="stat-num" id="st-total">0</span><div class="stat-lbl">DETECTADOS</div></div>
+    <div class="stat-box c-green"><span class="stat-num" id="st-ok">0</span><div class="stat-lbl">ACEPTADOS</div></div>
+    <div class="stat-box c-red"><span class="stat-num" id="st-no">0</span><div class="stat-lbl">RECHAZADOS</div></div>
+    <div class="stat-box c-amber"><span class="stat-num" id="st-man">0</span><div class="stat-lbl">MANUALES</div></div>
+  </div>
+
+  <!-- TOOLBAR -->
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <span class="toolbar-label">Filtrar:</span>
+      <div class="filter-tabs">
+        <button class="filter-tab active" onclick="setFilter('all',this)">Todos</button>
+        <button class="filter-tab" onclick="setFilter('pending',this)">Pendientes</button>
+        <button class="filter-tab" onclick="setFilter('accepted',this)">Aceptados</button>
+        <button class="filter-tab" onclick="setFilter('rejected',this)">Rechazados</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      <div class="search-wrap">
+        <span class="search-icon">⌕</span>
+        <input class="search-input" id="search-input" placeholder="Buscar TAG…" oninput="renderList()" />
+      </div>
+      <button class="qa-btn green" onclick="voteAll('accepted')">✓ Aceptar todos</button>
+      <button class="qa-btn red"   onclick="voteAll('rejected')">✗ Rechazar todos</button>
+      <button class="qa-btn"       onclick="voteAll('pending')">↺ Limpiar</button>
+    </div>
+  </div>
+
+  <!-- TAG LIST -->
+  <div class="tag-list" id="tag-list"></div>
+
+  <!-- ADD MANUAL -->
+  <div class="add-manual">
+    <div class="add-title">⊕ Agregar TAG manualmente</div>
+    <div class="add-grid">
+      <div class="add-fld">
+        <div class="add-lbl">TAG *</div>
+        <input class="add-input" id="m-tag" placeholder="VR-101" />
+      </div>
+      <div class="add-fld">
+        <div class="add-lbl">NOMBRE</div>
+        <input class="add-input" id="m-name" placeholder="Válvula Rotatoria" />
+      </div>
+      <div class="add-fld">
+        <div class="add-lbl">TIPO</div>
+        <select class="add-sel" id="m-type">
+          <option value="">Auto-detectar</option>
+          <option>Bomba</option>
+          <option>Compresor</option>
+          <option>Válvula Rotatoria</option>
+          <option>Válvula de Control</option>
+          <option>Válvula de Seguridad</option>
+          <option>Tanque</option>
+          <option>Recipiente</option>
+          <option>Intercambiador de Calor</option>
+          <option>Reactor</option>
+          <option>Motor</option>
+          <option>Filtro</option>
+          <option>Medidor de Flujo</option>
+          <option>Instrumento de Presión</option>
+          <option>Instrumento de Temperatura</option>
+          <option>Instrumento de Nivel</option>
+          <option>Analizador</option>
+          <option>Otro</option>
+        </select>
+      </div>
+      <div class="add-fld">
+        <div class="add-lbl">ÁREA</div>
+        <input class="add-input" id="m-area" placeholder="Área de proceso" />
+      </div>
+      <button class="add-btn" onclick="addManual()">+ Agregar</button>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="val-footer">
+    <div class="footer-hint" id="footer-hint">Acepta o rechaza cada TAG para continuar</div>
+    <div class="footer-btns">
+      <button class="btn-secondary" onclick="window.location.href='02_subir_pid.html'">← Volver</button>
+      <button class="btn-primary green" id="confirm-btn" onclick="confirm()" disabled>
+        Confirmar y ver equipos →
+      </button>
+    </div>
+  </div>
+
+</main>
+
+<script src="config.js"></script>
+<script src="shared.js"></script>
+<script>
+if (!SHARED.requireAuth()) {}
+
+// ════════════════════════
+// STATE
+// ════════════════════════
+let rawTags    = [];
+let manualTags = [];
+let tagStates  = {};   // id → 'pending'|'accepted'|'rejected'
+let activeFilter = 'all';
+
+// ════════════════════════
+// LOAD TAGS FROM MODULE 02
+// ════════════════════════
+function loadTags() {
+  rawTags = SHARED.getTags();
+
+  if (!rawTags.length) {
+    document.getElementById('tag-list').innerHTML = `
+      <div class="empty-state">
+        <span class="empty-icon">◈</span>
+        <div class="empty-title">No hay TAGs cargados</div>
+        <p style="font-size:13px;margin-top:6px;">Regresa al Módulo 02 para analizar un P&ID primero.</p>
+        <br>
+        <a href="02_subir_pid.html" style="color:var(--teal);font-size:13px;">← Ir a Analizar P&ID</a>
+      </div>`;
+    return;
+  }
+
+  // Restaurar estados guardados si existen
+  const savedStates = localStorage.getItem('pid_tag_states');
+  if (savedStates) {
+    try {
+      const parsed = JSON.parse(savedStates);
+      // Solo restaurar si corresponden a los mismos TAGs
+      const savedIds = Object.keys(parsed);
+      const currentIds = rawTags.map(t => t.id);
+      if (savedIds.some(id => currentIds.includes(id))) {
+        tagStates = parsed;
+      }
+    } catch(e) {}
+  }
+
+  // Inicializar pendientes los que no tengan estado
+  rawTags.forEach(t => {
+    if (!tagStates[t.id]) tagStates[t.id] = 'pending';
+  });
+
+  renderList();
+  updateStats();
+}
+
+// ════════════════════════
+// RENDER
+// ════════════════════════
+function allTags() { return [...rawTags, ...manualTags]; }
+
+function renderList() {
+  const search  = document.getElementById('search-input').value.toLowerCase();
+  const all     = allTags();
+  const visible = all.filter(t => {
+    const state  = tagStates[t.id] || 'pending';
+    const matchF = activeFilter === 'all' || state === activeFilter;
+    const matchS = !search || t.tag.toLowerCase().includes(search) ||
+                   (t.name || '').toLowerCase().includes(search) ||
+                   (t.area || '').toLowerCase().includes(search);
+    return matchF && matchS;
+  });
+
+  if (!visible.length) {
+    document.getElementById('tag-list').innerHTML = `
+      <div class="empty-state">
+        <span class="empty-icon">⌕</span>
+        <div class="empty-title">Sin resultados</div>
+        <p style="font-size:13px;margin-top:6px;">Intenta con otro filtro o búsqueda.</p>
+      </div>`;
+    return;
+  }
+
+  document.getElementById('tag-list').innerHTML = visible.map(t => {
+    const state       = tagStates[t.id] || 'pending';
+    const templateInfo = SHARED.getTemplateForTag(t.tag);
+    const specs = [t.power, t.capacity, t.size, t.pressure, t.temperature]
+      .filter(Boolean)
+      .map(s => `<span class="spec-chip">${esc(s)}</span>`)
+      .join('');
+
+    return `
+    <div class="tag-row ${state} ${t.isManual ? 'manual-row' : ''}" id="row-${t.id}">
+      <div class="tag-main">
+        <div class="tag-code">
+          ${esc(t.tag)}
+          ${t.isManual
+            ? `<span class="tag-badge badge-manual">MANUAL</span>`
+            : t.source === 'dxf'
+              ? `<span class="tag-badge badge-dxf">DXF</span>`
+              : `<span class="tag-badge badge-vision">VISION</span>`
+          }
+          ${templateInfo
+            ? `<span class="tag-badge badge-template">📋 ${esc(templateInfo.template)}</span>`
+            : `<span class="tag-badge badge-no-template">Sin plantilla</span>`
+          }
+          ${t.occurrences > 1 ? `<span style="font-size:10px;color:var(--txt3);font-family:var(--mono);">${t.occurrences}×</span>` : ''}
+        </div>
+        <div class="tag-info">
+          ${esc(t.name || '')}
+          ${t.type ? `<span style="color:var(--txt3)"> · ${esc(t.type)}</span>` : ''}
+        </div>
+        ${t.area ? `<div class="tag-area">📍 ${esc(t.area)}</div>` : ''}
+        ${specs ? `<div class="tag-specs">${specs}</div>` : ''}
+      </div>
+      <div class="tag-actions">
+        <button class="vc-btn y ${state === 'accepted' ? 'on' : ''}"
+          onclick="vote('${t.id}','accepted')" title="Sí, lo reconozco">✓</button>
+        <button class="vc-btn n ${state === 'rejected' ? 'on' : ''}"
+          onclick="vote('${t.id}','rejected')" title="No corresponde">✗</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function updateStats() {
+  const all      = allTags();
+  const accepted = all.filter(t => tagStates[t.id] === 'accepted').length;
+  const rejected = all.filter(t => tagStates[t.id] === 'rejected').length;
+  const pending  = all.filter(t => !tagStates[t.id] || tagStates[t.id] === 'pending').length;
+
+  document.getElementById('st-total').textContent = rawTags.length;
+  document.getElementById('st-ok').textContent    = accepted;
+  document.getElementById('st-no').textContent    = rejected;
+  document.getElementById('st-man').textContent   = manualTags.length;
+
+  const confirmBtn  = document.getElementById('confirm-btn');
+  const hintEl      = document.getElementById('footer-hint');
+
+  if (pending === 0 && accepted > 0) {
+    confirmBtn.disabled    = false;
+    hintEl.innerHTML       = `<strong>${accepted} equipo${accepted !== 1 ? 's' : ''}</strong> listo${accepted !== 1 ? 's' : ''} para confirmar`;
+    hintEl.className       = 'footer-hint';
+  } else if (pending === 0 && accepted === 0) {
+    confirmBtn.disabled    = true;
+    hintEl.innerHTML       = 'Acepta al menos un TAG para continuar';
+    hintEl.className       = 'footer-hint warn';
+  } else {
+    confirmBtn.disabled    = true;
+    hintEl.innerHTML       = `<strong class="warn">${pending} TAG${pending !== 1 ? 's' : ''}</strong> pendiente${pending !== 1 ? 's' : ''} de revisión`;
+    hintEl.className       = 'footer-hint warn';
+  }
+
+  // Save states
+  localStorage.setItem('pid_tag_states', JSON.stringify(tagStates));
+}
+
+// ════════════════════════
+// VOTING
+// ════════════════════════
+function vote(id, v) {
+  tagStates[id] = tagStates[id] === v ? 'pending' : v;
+  renderList();
+  updateStats();
+}
+
+function voteAll(v) {
+  const search  = document.getElementById('search-input').value.toLowerCase();
+  const visible = allTags().filter(t => {
+    const state  = tagStates[t.id] || 'pending';
+    const matchF = activeFilter === 'all' || state === activeFilter;
+    const matchS = !search || t.tag.toLowerCase().includes(search);
+    return matchF && matchS;
+  });
+  visible.forEach(t => { tagStates[t.id] = v; });
+  renderList();
+  updateStats();
+}
+
+function setFilter(f, btn) {
+  activeFilter = f;
+  document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderList();
+}
+
+// ════════════════════════
+// ADD MANUAL
+// ════════════════════════
+function addManual() {
+  const tag  = document.getElementById('m-tag').value.trim().toUpperCase();
+  if (!tag) { document.getElementById('m-tag').focus(); return; }
+  if (allTags().some(t => t.tag === tag)) {
+    SHARED.toast(`TAG "${tag}" ya existe en la lista`, 'warning'); return;
+  }
+
+  const name = document.getElementById('m-name').value.trim();
+  const type = document.getElementById('m-type').value;
+  const area = document.getElementById('m-area').value.trim();
+  const id   = 'man-' + Date.now();
+
+  manualTags.push({
+    id, tag,
+    name: name || guessName(tag),
+    type: type || guessType(tag),
+    area,
+    power: '', capacity: '', size: '', pressure: '', temperature: '', material: '',
+    isManual: true, source: 'manual', occurrences: 0,
+    template: SHARED.getTemplateForTag(tag)?.template || null,
+  });
+
+  tagStates[id] = 'accepted';
+
+  document.getElementById('m-tag').value  = '';
+  document.getElementById('m-name').value = '';
+  document.getElementById('m-type').value = '';
+  document.getElementById('m-area').value = '';
+
+  renderList();
+  updateStats();
+  SHARED.toast(`TAG ${tag} agregado manualmente`, 'success');
+}
+
+// ════════════════════════
+// CONFIRM → MODULE 04
+// ════════════════════════
+function confirm() {
+  const confirmed = allTags()
+    .filter(t => tagStates[t.id] === 'accepted')
+    .map(t => ({
+      ...t,
+      id: t.id || ('eq-' + Date.now() + '-' + Math.random()),
+      status:      'activo',
+      criticality: '',
+      notes:       '',
+      template:    SHARED.getTemplateForTag(t.tag)?.template || null,
+    }));
+
+  SHARED.saveEquipment(confirmed);
+  localStorage.removeItem('pid_tag_states'); // limpiar estados de validación
+  SHARED.toast(`${confirmed.length} equipos confirmados`, 'success');
+
+  setTimeout(() => {
+    window.location.href = '04_equipos.html';
+  }, 500);
+}
+
+// ════════════════════════
+// UTILS
+// ════════════════════════
+function guessType(tag) {
+  const p = tag.split('-')[0].toUpperCase();
+  if (/^(VR)/.test(p)) return 'Válvula Rotatoria';
+  if (/^(PSV|PRV)/.test(p)) return 'Válvula de Seguridad';
+  if (/^(HV|XV|MOV|CV|FCV|PCV|LCV)/.test(p)) return 'Válvula de Control';
+  if (/^(PI|PT|PIC|PDT|PSH|PSL)/.test(p)) return 'Instrumento de Presión';
+  if (/^(FI|FT|FIC|FM)/.test(p)) return 'Medidor de Flujo';
+  if (/^(TI|TT|TIC|TE)/.test(p)) return 'Instrumento de Temperatura';
+  if (/^(LI|LT|LIC|LE)/.test(p)) return 'Instrumento de Nivel';
+  if (/^(AI|AT|AG)/.test(p)) return 'Analizador';
+  if (/^(P|PP)$/.test(p)) return 'Bomba';
+  if (/^(C|CP)$/.test(p)) return 'Compresor';
+  if (/^(E|HE)/.test(p)) return 'Intercambiador de Calor';
+  if (/^(T|TK)/.test(p)) return 'Tanque';
+  if (/^(V|VL)$/.test(p)) return 'Recipiente';
+  if (/^(M|MO)/.test(p)) return 'Motor';
+  if (/^(R|RX)/.test(p)) return 'Reactor';
+  if (/^(F|FL)$/.test(p)) return 'Filtro';
+  return 'Instrumento';
+}
+
+function guessName(tag) {
+  const t = guessType(tag);
+  const n = tag.includes('-') ? tag.split('-').slice(1).join('-') : '';
+  return (t + ' ' + n).trim();
+}
+
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ════════════════════════
+// BOOT
+// ════════════════════════
+loadTags();
+</script>
+</body>
+</html>
