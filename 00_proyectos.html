@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>P&ID — Proyectos</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#0c0e14;--s1:#13161f;--s2:#1a1e2b;--s3:#222637;
+  --border:#252a3a;--border2:#333b52;
+  --teal:#00c9a7;--teal-lo:#00c9a712;--teal-mi:#00c9a730;
+  --amber:#f0a500;--amber-lo:#f0a50015;--amber-mi:#f0a50040;
+  --red:#ff4d6d;--red-lo:#ff4d6d15;--red-mi:#ff4d6d40;
+  --green:#22c55e;--green-lo:#22c55e12;--green-mi:#22c55e35;
+  --purple:#7f77dd;--purple-lo:#7f77dd12;--purple-mi:#7f77dd35;
+  --txt:#dde3f0;--txt2:#7c87a0;--txt3:#424d64;
+  --mono:'IBM Plex Mono',monospace;--sans:'Syne',sans-serif;
+  --r:10px;--rlg:16px;
+}
+body{font-family:var(--sans);background:var(--bg);color:var(--txt);min-height:100vh;}
+body::before{
+  content:'';position:fixed;inset:0;
+  background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);
+  background-size:48px 48px;opacity:.2;pointer-events:none;z-index:0;
+}
+header{
+  background:var(--s1);border-bottom:1px solid var(--border);
+  padding:0 2rem;height:56px;display:flex;align-items:center;
+  justify-content:space-between;position:sticky;top:0;z-index:100;
+}
+.logo{display:flex;align-items:center;gap:10px;}
+.logo-mark{width:30px;height:30px;background:var(--teal);border-radius:7px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:9px;font-weight:600;color:#0c0e14;line-height:1.2;text-align:center;}
+.logo-name{font-size:15px;font-weight:700;letter-spacing:-.3px;}
+.user-pill{display:flex;align-items:center;gap:8px;background:var(--s2);border:1px solid var(--border);border-radius:20px;padding:5px 14px 5px 8px;}
+.user-avatar{width:24px;height:24px;border-radius:50%;background:var(--teal-mi);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--teal);font-family:var(--mono);}
+.user-name{font-size:13px;font-weight:600;}
+.logout-btn{background:none;border:1px solid var(--border);border-radius:8px;color:var(--txt2);cursor:pointer;padding:6px 12px;font-family:var(--sans);font-size:12px;transition:all .15s;}
+.logout-btn:hover{background:var(--red-lo);color:var(--red);border-color:var(--red);}
+
+main{max-width:1100px;margin:0 auto;padding:2rem 2rem 5rem;position:relative;z-index:1;}
+
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:2rem;gap:1rem;flex-wrap:wrap;}
+.page-title{font-size:26px;font-weight:800;letter-spacing:-.5px;margin-bottom:4px;}
+.page-sub{font-size:14px;color:var(--txt2);}
+
+/* FILTERS */
+.toolbar{display:flex;align-items:center;gap:10px;margin-bottom:1.5rem;flex-wrap:wrap;}
+.search-wrap{position:relative;flex:1;min-width:200px;}
+.search-input{width:100%;background:var(--s1);border:1px solid var(--border2);border-radius:var(--r);padding:9px 12px 9px 36px;color:var(--txt);font-family:var(--sans);font-size:13px;outline:none;transition:border-color .15s;}
+.search-input:focus{border-color:var(--teal);}
+.search-input::placeholder{color:var(--txt3);}
+.search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--txt3);font-size:14px;}
+.filter-sel{background:var(--s1);border:1px solid var(--border2);border-radius:var(--r);padding:9px 14px;color:var(--txt);font-family:var(--sans);font-size:13px;outline:none;cursor:pointer;appearance:none;}
+.filter-sel:focus{border-color:var(--teal);}
+
+/* PROJECT GRID */
+.projects-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;}
+
+.project-card{
+  background:var(--s1);border:1px solid var(--border);border-radius:var(--rlg);
+  padding:1.4rem;cursor:pointer;transition:all .2s;position:relative;overflow:hidden;
+}
+.project-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--purple);transition:opacity .2s;opacity:.6;}
+.project-card:hover{border-color:var(--border2);transform:translateY(-2px);}
+.project-card:hover::before{opacity:1;}
+.project-card.active-project::before{background:var(--teal);}
+
+.pc-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;gap:10px;}
+.pc-num{font-family:var(--mono);font-size:10px;color:var(--txt3);letter-spacing:1px;}
+.pc-name{font-size:16px;font-weight:700;letter-spacing:-.3px;margin-top:2px;line-height:1.3;}
+.pc-client{
+  font-size:11px;font-family:var(--mono);padding:3px 10px;border-radius:4px;
+  background:var(--purple-lo);color:var(--purple);border:1px solid var(--purple-mi);
+  white-space:nowrap;flex-shrink:0;
+}
+.pc-client.ailsa{background:var(--teal-lo);color:var(--teal);border-color:var(--teal-mi);}
+.pc-client.acsesa{background:var(--amber-lo);color:var(--amber);border-color:var(--amber-mi);}
+.pc-client.calidra{background:var(--green-lo);color:var(--green);border-color:var(--green-mi);}
+
+.pc-desc{font-size:13px;color:var(--txt2);margin-bottom:14px;line-height:1.5;min-height:36px;}
+
+.pc-meta{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;}
+.pc-meta-item{font-size:11px;color:var(--txt3);font-family:var(--mono);}
+.pc-meta-item span{color:var(--txt2);}
+
+.pc-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:12px;}
+.pc-stat{background:var(--bg);border-radius:6px;padding:6px 10px;text-align:center;}
+.pc-stat-num{font-family:var(--mono);font-size:16px;font-weight:600;display:block;}
+.pc-stat-lbl{font-size:9px;color:var(--txt3);font-family:var(--mono);letter-spacing:.5px;}
+.pc-stat.c-teal .pc-stat-num{color:var(--teal);}
+.pc-stat.c-green .pc-stat-num{color:var(--green);}
+.pc-stat.c-amber .pc-stat-num{color:var(--amber);}
+
+.pc-footer{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.pc-date{font-size:11px;color:var(--txt3);font-family:var(--mono);}
+.pc-actions{display:flex;gap:6px;}
+.pc-btn{
+  padding:6px 14px;border-radius:var(--r);border:1px solid var(--border);
+  background:transparent;color:var(--txt2);font-family:var(--sans);font-size:12px;
+  cursor:pointer;transition:all .15s;text-decoration:none;display:inline-block;
+}
+.pc-btn:hover{background:var(--s2);color:var(--txt);}
+.pc-btn.primary{background:var(--teal);border-color:var(--teal);color:#0c0e14;font-weight:600;}
+.pc-btn.primary:hover{filter:brightness(1.08);}
+.pc-btn.danger:hover{background:var(--red-lo);color:var(--red);border-color:var(--red-mi);}
+
+.active-badge{
+  font-family:var(--mono);font-size:9px;padding:2px 8px;border-radius:3px;
+  background:var(--teal-lo);color:var(--teal);border:1px solid var(--teal-mi);letter-spacing:1px;
+}
+
+.empty-state{
+  text-align:center;padding:5rem 2rem;color:var(--txt3);
+  grid-column:1/-1;
+}
+.empty-icon{font-size:48px;display:block;margin-bottom:1rem;opacity:.25;}
+.empty-title{font-size:18px;font-weight:700;color:var(--txt2);margin-bottom:8px;}
+.empty-sub{font-size:14px;margin-bottom:1.5rem;}
+
+/* MODAL */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:1000;align-items:center;justify-content:center;padding:1.5rem;backdrop-filter:blur(6px);}
+.overlay.show{display:flex;}
+.modal{background:var(--s1);border:1px solid var(--border2);border-radius:var(--rlg);width:100%;max-width:560px;max-height:90vh;overflow-y:auto;}
+.modal-hdr{padding:1.5rem 1.5rem 1rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.modal-title{font-size:18px;font-weight:700;letter-spacing:-.3px;}
+.modal-x{background:var(--s2);border:1px solid var(--border);border-radius:8px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--txt2);font-size:18px;transition:all .15s;font-family:var(--sans);}
+.modal-x:hover{color:var(--txt);}
+.modal-body{padding:1.5rem;}
+.modal-ftr{padding:1rem 1.5rem 1.5rem;display:flex;gap:10px;justify-content:flex-end;border-top:1px solid var(--border);}
+
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.form-grp{display:flex;flex-direction:column;gap:5px;}
+.form-grp.full{grid-column:1/-1;}
+.form-lbl{font-size:12px;color:var(--txt2);font-weight:500;}
+.form-lbl span{color:var(--red);margin-left:2px;}
+.form-in,.form-sel,.form-ta{
+  background:var(--bg);border:1px solid var(--border2);border-radius:var(--r);
+  padding:10px 13px;color:var(--txt);font-family:var(--sans);font-size:14px;
+  outline:none;transition:border-color .15s;width:100%;
+}
+.form-in:focus,.form-sel:focus,.form-ta:focus{border-color:var(--teal);}
+.form-in::placeholder,.form-ta::placeholder{color:var(--txt3);}
+.form-sel{appearance:none;cursor:pointer;}
+.form-ta{resize:vertical;min-height:72px;}
+
+.btn-save{padding:10px 24px;border-radius:var(--r);border:none;background:var(--teal);color:#0c0e14;cursor:pointer;font-family:var(--sans);font-size:14px;font-weight:700;transition:filter .15s;}
+.btn-save:hover{filter:brightness(1.08);}
+.btn-cancel{padding:10px 20px;border-radius:var(--r);border:1px solid var(--border2);background:transparent;color:var(--txt2);cursor:pointer;font-family:var(--sans);font-size:14px;transition:all .15s;}
+.btn-cancel:hover{background:var(--s2);color:var(--txt);}
+.btn-new{padding:10px 22px;border-radius:var(--r);border:none;background:var(--teal);color:#0c0e14;font-family:var(--sans);font-size:14px;font-weight:700;cursor:pointer;transition:filter .15s;}
+.btn-new:hover{filter:brightness(1.08);}
+
+::-webkit-scrollbar{width:5px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+@media(max-width:600px){.form-grid{grid-template-columns:1fr;}main{padding:1.5rem 1rem 4rem;}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-mark">P&amp;<br>ID</div>
+    <div class="logo-name">P&ID Extractor</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <div class="user-pill">
+      <div class="user-avatar" id="hdr-avatar">—</div>
+      <span class="user-name" id="hdr-name">—</span>
+    </div>
+    <button class="logout-btn" onclick="logout()">Salir</button>
+  </div>
+</header>
+
+<main>
+  <div class="page-header">
+    <div>
+      <div class="page-title">Proyectos</div>
+      <div class="page-sub" id="page-sub">Selecciona un proyecto para continuar o crea uno nuevo.</div>
+    </div>
+    <button class="btn-new" onclick="openModal()">+ Nuevo proyecto</button>
+  </div>
+
+  <div class="toolbar">
+    <div class="search-wrap">
+      <span class="search-icon">⌕</span>
+      <input class="search-input" id="search" placeholder="Buscar proyecto…" oninput="renderProjects()" />
+    </div>
+    <select class="filter-sel" id="filter-client" onchange="renderProjects()">
+      <option value="">Todos los clientes</option>
+      <option value="AILSA">AILSA</option>
+      <option value="ACSESA">ACSESA</option>
+      <option value="CALIDRA">CALIDRA</option>
+      <option value="otro">Otro</option>
+    </select>
+    <select class="filter-sel" id="filter-status" onchange="renderProjects()">
+      <option value="">Todos los estados</option>
+      <option value="activo">Activos</option>
+      <option value="completado">Completados</option>
+      <option value="pausado">Pausados</option>
+    </select>
+  </div>
+
+  <div class="projects-grid" id="projects-grid"></div>
+</main>
+
+<!-- MODAL NUEVO/EDITAR PROYECTO -->
+<div class="overlay" id="modal-overlay" onclick="closeModalBg(event)">
+  <div class="modal">
+    <div class="modal-hdr">
+      <div class="modal-title" id="modal-title">Nuevo proyecto</div>
+      <button class="modal-x" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-grp">
+          <label class="form-lbl">Número de proyecto<span>*</span></label>
+          <input class="form-in" id="f-num" placeholder="PRY-2025-001" />
+        </div>
+        <div class="form-grp">
+          <label class="form-lbl">Cliente<span>*</span></label>
+          <select class="form-sel" id="f-client">
+            <option value="">Seleccionar…</option>
+            <option value="AILSA">AILSA</option>
+            <option value="ACSESA">ACSESA</option>
+            <option value="CALIDRA">CALIDRA</option>
+            <option value="otro">Otro</option>
+          </select>
+        </div>
+        <div class="form-grp full">
+          <label class="form-lbl">Nombre del proyecto<span>*</span></label>
+          <input class="form-in" id="f-name" placeholder="Ampliación Planta Norte" />
+        </div>
+        <div class="form-grp">
+          <label class="form-lbl">Región / Planta</label>
+          <input class="form-in" id="f-region" placeholder="Torreón, Coahuila" />
+        </div>
+        <div class="form-grp">
+          <label class="form-lbl">Fecha</label>
+          <input class="form-in" id="f-date" type="date" />
+        </div>
+        <div class="form-grp">
+          <label class="form-lbl">Estado</label>
+          <select class="form-sel" id="f-status">
+            <option value="activo">Activo</option>
+            <option value="pausado">Pausado</option>
+            <option value="completado">Completado</option>
+          </select>
+        </div>
+        <div class="form-grp">
+          <label class="form-lbl">Ingeniero responsable</label>
+          <input class="form-in" id="f-engineer" placeholder="Ing. García" />
+        </div>
+        <div class="form-grp full">
+          <label class="form-lbl">Descripción</label>
+          <textarea class="form-ta" id="f-desc" placeholder="Breve descripción del alcance del proyecto…"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-ftr">
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-save" onclick="saveProject()">Guardar proyecto</button>
+    </div>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script src="shared.js"></script>
+<script>
+if (!SHARED.requireAuth()) {}
+
+// ════════════════════════
+// STATE
+// ════════════════════════
+let editingId  = null;
+const user     = SHARED.currentUser();
+const isAdmin  = SHARED.isAdmin();
+
+// ════════════════════════
+// INIT
+// ════════════════════════
+document.getElementById('hdr-avatar').textContent = user.name.slice(0,2).toUpperCase();
+document.getElementById('hdr-name').textContent   = user.name;
+document.getElementById('page-sub').textContent   = isAdmin
+  ? 'Vista de administrador — todos los proyectos.'
+  : `Proyectos de ${user.name}.`;
+
+// Pre-fill date
+document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+document.getElementById('f-engineer').value = user.name;
+
+renderProjects();
+
+// ════════════════════════
+// PROJECTS STORAGE
+// ════════════════════════
+function getProjects() {
+  try { return JSON.parse(localStorage.getItem('pid_projects') || '[]'); } catch { return []; }
+}
+function saveProjects(projects) {
+  localStorage.setItem('pid_projects', JSON.stringify(projects));
+}
+
+function getActiveProject() {
+  try { return JSON.parse(localStorage.getItem('pid_active_project') || 'null'); } catch { return null; }
+}
+function setActiveProject(project) {
+  localStorage.setItem('pid_active_project', JSON.stringify(project));
+}
+
+// ════════════════════════
+// RENDER
+// ════════════════════════
+function renderProjects() {
+  const search   = document.getElementById('search').value.toLowerCase();
+  const fClient  = document.getElementById('filter-client').value;
+  const fStatus  = document.getElementById('filter-status').value;
+  const active   = getActiveProject();
+  let   projects = getProjects();
+
+  // Admin ve todo, operador solo los suyos
+  if (!isAdmin) {
+    projects = projects.filter(p => p.userId === user.username);
+  }
+
+  // Filters
+  projects = projects.filter(p => {
+    const ms = !search || p.name.toLowerCase().includes(search) ||
+               p.num.toLowerCase().includes(search) ||
+               (p.client || '').toLowerCase().includes(search);
+    const mc = !fClient || p.client === fClient;
+    const mst= !fStatus || p.status === fStatus;
+    return ms && mc && mst;
+  });
+
+  const grid = document.getElementById('projects-grid');
+
+  if (!projects.length) {
+    grid.innerHTML = `
+      <div class="empty-state">
+        <span class="empty-icon">◉</span>
+        <div class="empty-title">Sin proyectos</div>
+        <div class="empty-sub">Crea tu primer proyecto para empezar a analizar P&IDs.</div>
+        <button class="btn-new" onclick="openModal()">+ Crear primer proyecto</button>
+      </div>`;
+    return;
+  }
+
+  grid.innerHTML = projects.map(p => {
+    const isActive    = active?.id === p.id;
+    const clientClass = (p.client || '').toLowerCase();
+    const eqCount     = (p.equipment || []).length;
+    const dsCount     = (p.equipment || []).filter(e => e.dsGenerated).length;
+    const planosCount = (p.planos || []).length;
+
+    return `
+    <div class="project-card ${isActive ? 'active-project' : ''}" onclick="selectProject('${p.id}')">
+      <div class="pc-header">
+        <div>
+          <div class="pc-num">${esc(p.num)} ${isActive ? '<span class="active-badge">ACTIVO</span>' : ''}</div>
+          <div class="pc-name">${esc(p.name)}</div>
+        </div>
+        <span class="pc-client ${clientClass}">${esc(p.client || '—')}</span>
+      </div>
+      <div class="pc-desc">${esc(p.description || 'Sin descripción')}</div>
+      <div class="pc-meta">
+        <div class="pc-meta-item">Planta: <span>${esc(p.region || '—')}</span></div>
+        <div class="pc-meta-item">Ing: <span>${esc(p.engineer || '—')}</span></div>
+      </div>
+      <div class="pc-stats">
+        <div class="pc-stat c-teal">
+          <span class="pc-stat-num">${planosCount}</span>
+          <div class="pc-stat-lbl">PLANOS</div>
+        </div>
+        <div class="pc-stat c-green">
+          <span class="pc-stat-num">${eqCount}</span>
+          <div class="pc-stat-lbl">EQUIPOS</div>
+        </div>
+        <div class="pc-stat c-amber">
+          <span class="pc-stat-num">${dsCount}</span>
+          <div class="pc-stat-lbl">DATASHEETS</div>
+        </div>
+      </div>
+      <div class="pc-footer">
+        <div class="pc-date">${esc(p.date || '—')}</div>
+        <div class="pc-actions">
+          <button class="pc-btn" onclick="editProject(event,'${p.id}')">Editar</button>
+          ${isAdmin ? `<button class="pc-btn danger" onclick="deleteProject(event,'${p.id}')">×</button>` : ''}
+          <button class="pc-btn primary" onclick="openProject(event,'${p.id}')">
+            ${isActive ? 'Continuar →' : 'Abrir →'}
+          </button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ════════════════════════
+// ACTIONS
+// ════════════════════════
+function selectProject(id) {
+  const projects = getProjects();
+  const p = projects.find(x => x.id === id);
+  if (!p) return;
+  setActiveProject(p);
+  renderProjects();
+  SHARED.toast(`Proyecto "${p.name}" seleccionado`, 'success');
+}
+
+function openProject(e, id) {
+  e.stopPropagation();
+  selectProject(id);
+  setTimeout(() => { window.location.href = '04_equipos.html'; }, 300);
+}
+
+function editProject(e, id) {
+  e.stopPropagation();
+  const p = getProjects().find(x => x.id === id);
+  if (!p) return;
+  editingId = id;
+  document.getElementById('modal-title').textContent = 'Editar proyecto';
+  document.getElementById('f-num').value      = p.num || '';
+  document.getElementById('f-name').value     = p.name || '';
+  document.getElementById('f-client').value   = p.client || '';
+  document.getElementById('f-region').value   = p.region || '';
+  document.getElementById('f-date').value     = p.date || '';
+  document.getElementById('f-status').value   = p.status || 'activo';
+  document.getElementById('f-engineer').value = p.engineer || '';
+  document.getElementById('f-desc').value     = p.description || '';
+  document.getElementById('modal-overlay').classList.add('show');
+}
+
+function deleteProject(e, id) {
+  e.stopPropagation();
+  const p = getProjects().find(x => x.id === id);
+  if (!p) return;
+  if (!confirm(`¿Eliminar el proyecto "${p.name}"? Esta acción no se puede deshacer.`)) return;
+  const updated = getProjects().filter(x => x.id !== id);
+  saveProjects(updated);
+  const active = getActiveProject();
+  if (active?.id === id) localStorage.removeItem('pid_active_project');
+  renderProjects();
+  SHARED.toast('Proyecto eliminado', 'info');
+}
+
+// ════════════════════════
+// MODAL
+// ════════════════════════
+function openModal() {
+  editingId = null;
+  document.getElementById('modal-title').textContent = 'Nuevo proyecto';
+  document.getElementById('f-num').value      = '';
+  document.getElementById('f-name').value     = '';
+  document.getElementById('f-client').value   = '';
+  document.getElementById('f-region').value   = '';
+  document.getElementById('f-date').value     = new Date().toISOString().split('T')[0];
+  document.getElementById('f-status').value   = 'activo';
+  document.getElementById('f-engineer').value = user.name;
+  document.getElementById('f-desc').value     = '';
+  document.getElementById('modal-overlay').classList.add('show');
+  setTimeout(() => document.getElementById('f-num').focus(), 100);
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('show');
+  editingId = null;
+}
+function closeModalBg(e) {
+  if (e.target === document.getElementById('modal-overlay')) closeModal();
+}
+
+function saveProject() {
+  const num      = document.getElementById('f-num').value.trim();
+  const name     = document.getElementById('f-name').value.trim();
+  const client   = document.getElementById('f-client').value;
+
+  if (!num || !name || !client) {
+    SHARED.toast('Completa los campos obligatorios (*)','warning'); return;
+  }
+
+  const projects = getProjects();
+
+  if (editingId) {
+    const idx = projects.findIndex(p => p.id === editingId);
+    if (idx === -1) return;
+    projects[idx] = {
+      ...projects[idx],
+      num, name, client,
+      region:      document.getElementById('f-region').value.trim(),
+      date:        document.getElementById('f-date').value,
+      status:      document.getElementById('f-status').value,
+      engineer:    document.getElementById('f-engineer').value.trim(),
+      description: document.getElementById('f-desc').value.trim(),
+      updatedAt:   new Date().toISOString(),
+    };
+    // Update active project if it's the one being edited
+    const active = getActiveProject();
+    if (active?.id === editingId) setActiveProject(projects[idx]);
+    SHARED.toast('Proyecto actualizado', 'success');
+  } else {
+    const newProject = {
+      id:          'proj-' + Date.now(),
+      num, name, client,
+      region:      document.getElementById('f-region').value.trim(),
+      date:        document.getElementById('f-date').value,
+      status:      document.getElementById('f-status').value,
+      engineer:    document.getElementById('f-engineer').value.trim(),
+      description: document.getElementById('f-desc').value.trim(),
+      userId:      user.username,
+      createdAt:   new Date().toISOString(),
+      planos:      [],
+      equipment:   [],
+    };
+    projects.unshift(newProject);
+    setActiveProject(newProject);
+    SHARED.toast(`Proyecto "${name}" creado`, 'success');
+  }
+
+  saveProjects(projects);
+  closeModal();
+  renderProjects();
+}
+
+function logout() { SHARED.clearSession(); window.location.href = 'login.html'; }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>

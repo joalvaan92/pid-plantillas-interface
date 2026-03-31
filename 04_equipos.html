@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>P&ID — Dashboard de Equipos</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#0c0e14;--s1:#13161f;--s2:#1a1e2b;--s3:#222637;
+  --border:#252a3a;--border2:#333b52;
+  --teal:#00c9a7;--teal-lo:#00c9a712;--teal-mi:#00c9a730;
+  --amber:#f0a500;--amber-lo:#f0a50015;--amber-mi:#f0a50040;
+  --red:#ff4d6d;--red-lo:#ff4d6d15;--red-mi:#ff4d6d40;
+  --green:#22c55e;--green-lo:#22c55e12;--green-mi:#22c55e35;
+  --purple:#7f77dd;--purple-lo:#7f77dd12;--purple-mi:#7f77dd35;
+  --txt:#dde3f0;--txt2:#7c87a0;--txt3:#424d64;
+  --mono:'IBM Plex Mono',monospace;--sans:'Syne',sans-serif;
+  --r:10px;--rlg:16px;
+}
+body{font-family:var(--sans);background:var(--bg);color:var(--txt);min-height:100vh;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:48px 48px;opacity:.2;pointer-events:none;z-index:0;}
+
+header{background:var(--s1);border-bottom:1px solid var(--border);padding:0 2rem;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.logo{display:flex;align-items:center;gap:10px;}
+.logo-mark{width:30px;height:30px;background:var(--teal);border-radius:7px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:9px;font-weight:600;color:#0c0e14;line-height:1.2;text-align:center;}
+.breadcrumb{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--txt2);}
+.breadcrumb a{color:var(--txt2);text-decoration:none;transition:color .15s;}
+.breadcrumb a:hover{color:var(--txt);}
+.breadcrumb span{color:var(--txt3);}
+.breadcrumb strong{color:var(--amber);}
+.hdr-right{display:flex;align-items:center;gap:8px;}
+.hdr-btn{padding:7px 14px;border-radius:var(--r);border:1px solid var(--border);background:transparent;color:var(--txt2);font-family:var(--sans);font-size:12px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:all .15s;}
+.hdr-btn:hover{background:var(--s2);color:var(--txt);}
+.hdr-btn.primary{background:var(--teal);border-color:var(--teal);color:#0c0e14;font-weight:600;}
+.hdr-btn.primary:hover{filter:brightness(1.08);}
+
+main{max-width:1200px;margin:0 auto;padding:2rem 2rem 5rem;position:relative;z-index:1;}
+
+/* PROJECT BANNER */
+.project-banner{
+  background:var(--s1);border:1px solid var(--border);border-radius:var(--rlg);
+  padding:1.25rem 1.5rem;margin-bottom:2rem;
+  display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;
+}
+.pb-info{display:flex;align-items:center;gap:14px;}
+.pb-icon{width:40px;height:40px;background:var(--purple-lo);border:1px solid var(--purple-mi);border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;color:var(--purple);font-weight:600;}
+.pb-num{font-family:var(--mono);font-size:10px;color:var(--txt3);letter-spacing:1px;}
+.pb-name{font-size:16px;font-weight:700;letter-spacing:-.3px;}
+.pb-client{font-family:var(--mono);font-size:11px;padding:2px 10px;border-radius:4px;background:var(--purple-lo);color:var(--purple);border:1px solid var(--purple-mi);}
+.pb-client.ailsa{background:var(--teal-lo);color:var(--teal);border-color:var(--teal-mi);}
+.pb-client.acsesa{background:var(--amber-lo);color:var(--amber);border-color:var(--amber-mi);}
+.pb-client.calidra{background:var(--green-lo);color:var(--green);border-color:var(--green-mi);}
+
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:2rem;}
+.stat-box{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:12px 16px;}
+.stat-num{font-family:var(--mono);font-size:26px;font-weight:600;display:block;}
+.stat-lbl{font-size:11px;color:var(--txt2);margin-top:2px;}
+.stat-box.c-teal .stat-num{color:var(--teal);}
+.stat-box.c-green .stat-num{color:var(--green);}
+.stat-box.c-amber .stat-num{color:var(--amber);}
+.stat-box.c-red .stat-num{color:var(--red);}
+
+/* TOOLBAR */
+.toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;gap:1rem;flex-wrap:wrap;}
+.toolbar-left{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.search-wrap{position:relative;}
+.search-in{background:var(--s1);border:1px solid var(--border2);border-radius:var(--r);padding:8px 12px 8px 34px;color:var(--txt);font-family:var(--sans);font-size:13px;outline:none;transition:border-color .15s;width:220px;}
+.search-in:focus{border-color:var(--teal);}
+.search-in::placeholder{color:var(--txt3);}
+.search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--txt3);font-size:14px;}
+.filter-sel{background:var(--s1);border:1px solid var(--border2);border-radius:var(--r);padding:8px 12px;color:var(--txt);font-family:var(--sans);font-size:13px;outline:none;cursor:pointer;appearance:none;}
+.area-chip{padding:5px 14px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--txt2);font-size:12px;cursor:pointer;transition:all .15s;font-family:var(--sans);}
+.area-chip:hover{background:var(--s2);color:var(--txt);}
+.area-chip.active{background:var(--teal-lo);border-color:var(--teal-mi);color:var(--teal);}
+
+/* EQUIPMENT GRID */
+.eq-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;}
+
+.eq-card{background:var(--s1);border:1px solid var(--border);border-radius:var(--rlg);padding:1.2rem;transition:all .2s;position:relative;overflow:hidden;}
+.eq-card::after{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--teal);opacity:0;transition:opacity .2s;}
+.eq-card:hover{border-color:var(--border2);transform:translateY(-1px);}
+.eq-card:hover::after{opacity:1;}
+.eq-card.ds-done::after{background:var(--green);opacity:.8;}
+.eq-card.ds-done{border-color:var(--green-mi);}
+
+.eq-hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;}
+.eq-tag{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--teal);background:var(--teal-lo);padding:3px 9px;border-radius:5px;}
+.eq-type-b{font-size:10px;color:var(--txt2);background:var(--s3);padding:2px 8px;border-radius:4px;border:1px solid var(--border);}
+.eq-name{font-size:14px;font-weight:600;margin-bottom:2px;line-height:1.3;}
+.eq-area{font-size:11px;color:var(--txt2);font-family:var(--mono);margin-bottom:10px;}
+
+.eq-specs{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:12px;}
+.eq-spec{background:var(--bg);border-radius:5px;padding:5px 8px;}
+.eq-spec-l{font-size:9px;color:var(--txt3);font-family:var(--mono);letter-spacing:.5px;display:block;margin-bottom:1px;}
+.eq-spec-v{font-size:11px;font-weight:500;font-family:var(--mono);color:var(--txt);}
+
+.ds-status{
+  display:flex;align-items:center;gap:6px;font-size:11px;font-family:var(--mono);
+  padding:5px 10px;border-radius:6px;margin-bottom:10px;
+}
+.ds-status.pending{background:var(--amber-lo);color:var(--amber);border:1px solid var(--amber-mi);}
+.ds-status.done{background:var(--green-lo);color:var(--green);border:1px solid var(--green-mi);}
+.ds-dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0;}
+
+.eq-actions{display:flex;gap:6px;}
+.eq-btn{flex:1;padding:8px;border-radius:var(--r);border:1px solid var(--border);background:transparent;color:var(--txt2);font-family:var(--sans);font-size:12px;cursor:pointer;transition:all .15s;text-align:center;}
+.eq-btn:hover{background:var(--s2);color:var(--txt);}
+.eq-btn.primary{background:var(--teal);border-color:var(--teal);color:#0c0e14;font-weight:600;}
+.eq-btn.primary:hover{filter:brightness(1.08);}
+.eq-btn.success{background:var(--green);border-color:var(--green);color:#0c0e14;font-weight:600;}
+.eq-btn.success:hover{filter:brightness(1.08);}
+
+.empty-state{text-align:center;padding:4rem 2rem;color:var(--txt3);grid-column:1/-1;}
+.empty-icon{font-size:48px;display:block;margin-bottom:1rem;opacity:.25;}
+.empty-title{font-size:18px;font-weight:700;color:var(--txt2);margin-bottom:8px;}
+
+/* MODAL EQUIPO */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:1000;align-items:center;justify-content:center;padding:1.5rem;backdrop-filter:blur(6px);}
+.overlay.show{display:flex;}
+.modal{background:var(--s1);border:1px solid var(--border2);border-radius:var(--rlg);width:100%;max-width:620px;max-height:92vh;overflow-y:auto;}
+.modal-hdr{padding:1.25rem 1.5rem 1rem;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;position:sticky;top:0;background:var(--s1);z-index:10;}
+.modal-tag{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--teal);}
+.modal-sub{font-size:12px;color:var(--txt2);margin-top:2px;}
+.modal-x{background:var(--s2);border:1px solid var(--border);border-radius:8px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--txt2);font-size:18px;transition:all .15s;font-family:var(--sans);flex-shrink:0;}
+.modal-x:hover{color:var(--txt);}
+.modal-body{padding:1.5rem;}
+.modal-ftr{padding:1rem 1.5rem 1.5rem;display:flex;gap:10px;justify-content:space-between;border-top:1px solid var(--border);flex-wrap:wrap;}
+
+.section-lbl{font-family:var(--mono);font-size:10px;letter-spacing:2px;color:var(--txt3);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1.25rem;}
+.form-grp{display:flex;flex-direction:column;gap:4px;}
+.form-grp.full{grid-column:1/-1;}
+.form-lbl{font-size:11px;color:var(--txt2);}
+.form-lbl.auto{color:var(--teal);}
+.form-lbl.user{color:var(--amber);}
+.form-lbl.general{color:var(--purple);}
+.form-in,.form-sel,.form-ta{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:9px 12px;color:var(--txt);font-family:var(--sans);font-size:13px;outline:none;transition:border-color .15s;width:100%;}
+.form-in.mono{font-family:var(--mono);font-size:12px;}
+.form-in:focus,.form-sel:focus,.form-ta:focus{border-color:var(--teal);}
+.form-in.auto-field{border-color:var(--teal-mi);background:var(--teal-lo);}
+.form-ta{resize:vertical;min-height:68px;}
+.form-sel{appearance:none;cursor:pointer;}
+.form-in[readonly]{opacity:.6;cursor:default;}
+
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:1rem;font-size:11px;}
+.legend-item{display:flex;align-items:center;gap:5px;}
+.legend-dot{width:8px;height:8px;border-radius:50%;}
+.legend-dot.auto{background:var(--teal);}
+.legend-dot.user{background:var(--amber);}
+.legend-dot.general{background:var(--purple);}
+
+.btn-save{padding:9px 22px;border-radius:var(--r);border:none;background:var(--teal);color:#0c0e14;cursor:pointer;font-family:var(--sans);font-size:13px;font-weight:700;transition:filter .15s;}
+.btn-save:hover{filter:brightness(1.08);}
+.btn-ds{padding:9px 22px;border-radius:var(--r);border:none;background:var(--green);color:#0c0e14;cursor:pointer;font-family:var(--sans);font-size:13px;font-weight:700;transition:filter .15s;}
+.btn-ds:hover{filter:brightness(1.08);}
+.btn-cancel{padding:9px 18px;border-radius:var(--r);border:1px solid var(--border2);background:transparent;color:var(--txt2);cursor:pointer;font-family:var(--sans);font-size:13px;transition:all .15s;}
+.btn-cancel:hover{background:var(--s2);color:var(--txt);}
+
+::-webkit-scrollbar{width:5px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+@media(max-width:640px){.stats-row{grid-template-columns:1fr 1fr;}.form-grid{grid-template-columns:1fr;}main{padding:1.5rem 1rem 4rem;}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-mark">P&amp;<br>ID</div>
+    <div class="breadcrumb">
+      <a href="00_proyectos.html">Proyectos</a>
+      <span>›</span>
+      <strong id="hdr-project-name">Dashboard</strong>
+    </div>
+  </div>
+  <div class="hdr-right">
+    <a href="02_subir_pid.html" class="hdr-btn">+ Analizar P&ID</a>
+    <button class="hdr-btn primary" id="export-all-btn" onclick="exportAll()">↓ Exportar todos</button>
+  </div>
+</header>
+
+<main>
+  <!-- PROJECT BANNER -->
+  <div class="project-banner" id="project-banner" style="display:none;">
+    <div class="pb-info">
+      <div class="pb-icon" id="pb-icon">—</div>
+      <div>
+        <div class="pb-num" id="pb-num">—</div>
+        <div class="pb-name" id="pb-name">—</div>
+        <div style="font-size:12px;color:var(--txt2);margin-top:2px;" id="pb-region">—</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span class="pb-client" id="pb-client">—</span>
+      <a href="00_proyectos.html" class="hdr-btn">Cambiar proyecto</a>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-row">
+    <div class="stat-box c-teal"><span class="stat-num" id="st-total">0</span><div class="stat-lbl">Equipos totales</div></div>
+    <div class="stat-box c-green"><span class="stat-num" id="st-ds">0</span><div class="stat-lbl">Datasheets generados</div></div>
+    <div class="stat-box c-amber"><span class="stat-num" id="st-pend">0</span><div class="stat-lbl">Pendientes</div></div>
+    <div class="stat-box c-red"><span class="stat-num" id="st-notpl">0</span><div class="stat-lbl">Sin plantilla</div></div>
+  </div>
+
+  <!-- TOOLBAR -->
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <div class="search-wrap">
+        <span class="search-icon">⌕</span>
+        <input class="search-in" id="search" placeholder="Buscar equipo o TAG…" oninput="renderGrid()" />
+      </div>
+      <select class="filter-sel" id="filter-status" onchange="renderGrid()">
+        <option value="">Todos los estados</option>
+        <option value="pending">Sin datasheet</option>
+        <option value="done">Con datasheet</option>
+      </select>
+      <div id="area-chips" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+    </div>
+  </div>
+
+  <!-- GRID -->
+  <div class="eq-grid" id="eq-grid"></div>
+</main>
+
+<!-- MODAL EQUIPO -->
+<div class="overlay" id="modal-overlay" onclick="closeModalBg(event)">
+  <div class="modal">
+    <div class="modal-hdr">
+      <div>
+        <div class="modal-tag" id="m-tag">—</div>
+        <div class="modal-sub" id="m-sub">—</div>
+      </div>
+      <button class="modal-x" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot auto"></div><span style="color:var(--txt2)">Extraído del P&ID</span></div>
+        <div class="legend-item"><div class="legend-dot user"></div><span style="color:var(--txt2)">Completa el ingeniero</span></div>
+        <div class="legend-item"><div class="legend-dot general"></div><span style="color:var(--txt2)">Datos generales del proyecto</span></div>
+      </div>
+
+      <!-- DATOS GENERALES (del proyecto) -->
+      <div class="section-lbl">DATOS GENERALES DEL PROYECTO</div>
+      <div class="form-grid">
+        <div class="form-grp">
+          <label class="form-lbl general">Número de proyecto</label>
+          <input class="form-in mono" id="fm-proj-num" readonly />
+        </div>
+        <div class="form-grp">
+          <label class="form-lbl general">Cliente</label>
+          <input class="form-in" id="fm-proj-client" readonly />
+        </div>
+        <div class="form-grp full">
+          <label class="form-lbl general">Nombre del proyecto</label>
+          <input class="form-in" id="fm-proj-name" readonly />
+        </div>
+        <div class="form-grp">
+          <label class="form-lbl general">Región / Planta</label>
+          <input class="form-in" id="fm-proj-region" readonly />
+        </div>
+        <div class="form-grp">
+          <label class="form-lbl general">Ingeniero responsable</label>
+          <input class="form-in" id="fm-proj-eng" readonly />
+        </div>
+      </div>
+
+      <!-- DATOS DE CLAUDE VISION -->
+      <div class="section-lbl">DATOS EXTRAÍDOS DEL P&ID (Claude Vision)</div>
+      <div class="form-grid">
+        <div class="form-grp">
+          <label class="form-lbl auto">TAG / Clave</label>
+          <input class="form-in mono auto-field" id="fm-tag" />
+        </div>
+        <div class="form-grp">
+          <label class="form-lbl auto">Tipo de equipo</label>
+          <input class="form-in auto-field" id="fm-type" />
+        </div>
+        <div class="form-grp full">
+          <label class="form-lbl auto">Nombre / Servicio</label>
+          <input class="form-in auto-field" id="fm-name" />
+        </div>
+        <div class="form-grp full">
+          <label class="form-lbl auto">Área / Zona</label>
+          <input class="form-in auto-field" id="fm-area" />
+        </div>
+        <div class="form-grp">
+          <label class="form-lbl auto">Capacidad</label>
+          <input class="form-in mono auto-field" id="fm-capacity" placeholder="500 L/h" />
+        </div>
+        <div class="form-grp">
+          <label class="form-lbl auto">Potencia</label>
+          <input class="form-in mono auto-field" id="fm-power" placeholder="15 kW" />
+        </div>
+        <div class="form-grp">
+          <label class="form-lbl auto">Presión diseño</label>
+          <input class="form-in mono auto-field" id="fm-pressure" placeholder="10 bar" />
+        </div>
+        <div class="form-grp">
+          <label class="form-lbl auto">Temperatura diseño</label>
+          <input class="form-in mono auto-field" id="fm-temp" placeholder="150 °C" />
+        </div>
+        <div class="form-grp">
+          <label class="form-lbl auto">Tamaño</label>
+          <input class="form-in mono auto-field" id="fm-size" placeholder="DN50" />
+        </div>
+        <div class="form-grp">
+          <label class="form-lbl auto">Material</label>
+          <input class="form-in auto-field" id="fm-material" placeholder="AISI 316L" />
+        </div>
+      </div>
+
+      <!-- DATOS DEL USUARIO -->
+      <div class="section-lbl">DATOS DEL INGENIERO</div>
+      <div class="form-grid">
+        <div class="form-grp">
+          <label class="form-lbl user">Densidad (ton/m³)</label>
+          <input class="form-in mono" id="fm-density" placeholder="1.2" />
+        </div>
+        <div class="form-grp">
+          <label class="form-lbl user">Abrasividad</label>
+          <select class="form-sel" id="fm-abrasion">
+            <option value="">Seleccionar…</option>
+            <option>No abrasivo</option>
+            <option>Ligeramente abrasivo</option>
+            <option>Moderadamente abrasivo</option>
+            <option>Muy abrasivo</option>
+          </select>
+        </div>
+        <div class="form-grp">
+          <label class="form-lbl user">Estado operativo</label>
+          <select class="form-sel" id="fm-status">
+            <option value="activo">Activo</option>
+            <option value="standby">Stand-by</option>
+            <option value="mantenimiento">Mantenimiento</option>
+            <option value="fuera-servicio">Fuera de servicio</option>
+          </select>
+        </div>
+        <div class="form-grp">
+          <label class="form-lbl user">Criticidad</label>
+          <select class="form-sel" id="fm-criticality">
+            <option value="">Seleccionar…</option>
+            <option value="alta">Alta</option>
+            <option value="media">Media</option>
+            <option value="baja">Baja</option>
+          </select>
+        </div>
+        <div class="form-grp full">
+          <label class="form-lbl user">Notas / Observaciones</label>
+          <textarea class="form-ta" id="fm-notes" placeholder="Notas adicionales, requerimientos especiales, documentos relacionados…"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-ftr">
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-save" onclick="saveEquipment()">Guardar</button>
+        <button class="btn-ds" onclick="generateDatasheet()">↓ Generar datasheet</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script src="shared.js"></script>
+<script>
+if (!SHARED.requireAuth()) {}
+
+// ════════════════════════
+// STATE
+// ════════════════════════
+let equipment   = [];
+let activeArea  = 'all';
+let currentEqId = null;
+let activeProject = null;
+
+// ════════════════════════
+// INIT
+// ════════════════════════
+function init() {
+  // Load active project
+  try { activeProject = JSON.parse(localStorage.getItem('pid_active_project') || 'null'); } catch {}
+
+  if (activeProject) {
+    document.getElementById('project-banner').style.display = '';
+    document.getElementById('hdr-project-name').textContent = activeProject.name;
+    document.getElementById('pb-num').textContent    = activeProject.num || '—';
+    document.getElementById('pb-name').textContent   = activeProject.name;
+    document.getElementById('pb-region').textContent = activeProject.region || '—';
+    document.getElementById('pb-icon').textContent   = (activeProject.num || 'PR').slice(0,3).toUpperCase();
+
+    const clientEl = document.getElementById('pb-client');
+    clientEl.textContent  = activeProject.client || '—';
+    clientEl.className    = 'pb-client ' + (activeProject.client || '').toLowerCase();
+  }
+
+  // Load equipment — merge project equipment + shared state equipment
+  const sharedEq  = SHARED.getEquipment();
+  const projectEq = activeProject?.equipment || [];
+
+  // If there's new equipment from validation (not yet in project), merge it
+  if (sharedEq.length > 0) {
+    const existingIds = new Set(projectEq.map(e => e.id));
+    const newEqs = sharedEq.filter(e => !existingIds.has(e.id));
+    equipment = [...projectEq, ...newEqs];
+    // Save back to project
+    saveToProject();
+    // Clear shared state
+    SHARED.saveEquipment([]);
+  } else {
+    equipment = projectEq;
+  }
+
+  renderStats();
+  renderAreaChips();
+  renderGrid();
+}
+
+function saveToProject() {
+  if (!activeProject) return;
+  activeProject.equipment = equipment;
+  localStorage.setItem('pid_active_project', JSON.stringify(activeProject));
+
+  const projects = JSON.parse(localStorage.getItem('pid_projects') || '[]');
+  const idx = projects.findIndex(p => p.id === activeProject.id);
+  if (idx !== -1) {
+    projects[idx] = activeProject;
+    localStorage.setItem('pid_projects', JSON.stringify(projects));
+  }
+}
+
+// ════════════════════════
+// STATS & AREAS
+// ════════════════════════
+function renderStats() {
+  const ds    = equipment.filter(e => e.dsGenerated).length;
+  const pend  = equipment.length - ds;
+  const notpl = equipment.filter(e => !e.template).length;
+
+  document.getElementById('st-total').textContent = equipment.length;
+  document.getElementById('st-ds').textContent    = ds;
+  document.getElementById('st-pend').textContent  = pend;
+  document.getElementById('st-notpl').textContent = notpl;
+}
+
+function renderAreaChips() {
+  const areas = ['all', ...new Set(equipment.map(e => e.area).filter(Boolean))];
+  document.getElementById('area-chips').innerHTML = areas.map(a =>
+    `<button class="area-chip ${a === activeArea ? 'active' : ''}" onclick="filterArea('${esc(a)}',this)">
+      ${a === 'all' ? 'Todas las áreas' : esc(a)}
+    </button>`).join('');
+}
+
+function filterArea(area, btn) {
+  activeArea = area;
+  document.querySelectorAll('.area-chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  renderGrid();
+}
+
+// ════════════════════════
+// RENDER GRID
+// ════════════════════════
+function renderGrid() {
+  const search = document.getElementById('search').value.toLowerCase();
+  const fSt    = document.getElementById('filter-status').value;
+
+  const filtered = equipment.filter(eq => {
+    const matchA = activeArea === 'all' || eq.area === activeArea;
+    const matchS = !search || eq.tag.toLowerCase().includes(search) || (eq.name||'').toLowerCase().includes(search);
+    const matchSt= !fSt ||
+      (fSt === 'done' && eq.dsGenerated) ||
+      (fSt === 'pending' && !eq.dsGenerated);
+    return matchA && matchS && matchSt;
+  });
+
+  const grid = document.getElementById('eq-grid');
+
+  if (!filtered.length) {
+    grid.innerHTML = `
+      <div class="empty-state">
+        <span class="empty-icon">◎</span>
+        <div class="empty-title">Sin equipos</div>
+        <p style="font-size:13px;margin-top:6px;">
+          ${equipment.length === 0
+            ? 'Analiza un P&ID para cargar equipos aquí.'
+            : 'Sin resultados para los filtros actuales.'}
+        </p>
+        ${equipment.length === 0 ? `<br><a href="02_subir_pid.html" style="color:var(--teal);font-size:13px;">→ Ir a Analizar P&ID</a>` : ''}
+      </div>`;
+    return;
+  }
+
+  grid.innerHTML = filtered.map(eq => `
+    <div class="eq-card ${eq.dsGenerated ? 'ds-done' : ''}">
+      <div class="eq-hdr">
+        <span class="eq-tag">${esc(eq.tag)}</span>
+        ${eq.type ? `<span class="eq-type-b">${esc(eq.type)}</span>` : ''}
+      </div>
+      <div class="eq-name">${esc(eq.name) || '<span style="opacity:.4">Sin nombre</span>'}</div>
+      <div class="eq-area">${eq.area ? '📍 '+esc(eq.area) : ''}</div>
+      <div class="eq-specs">
+        <div class="eq-spec"><span class="eq-spec-l">POTENCIA</span><span class="eq-spec-v">${esc(eq.power)||'—'}</span></div>
+        <div class="eq-spec"><span class="eq-spec-l">CAPACIDAD</span><span class="eq-spec-v">${esc(eq.capacity)||'—'}</span></div>
+        <div class="eq-spec"><span class="eq-spec-l">PRESIÓN</span><span class="eq-spec-v">${esc(eq.pressure)||'—'}</span></div>
+        <div class="eq-spec"><span class="eq-spec-l">TEMPERATURA</span><span class="eq-spec-v">${esc(eq.temperature)||'—'}</span></div>
+      </div>
+      <div class="ds-status ${eq.dsGenerated ? 'done' : 'pending'}">
+        <div class="ds-dot"></div>
+        ${eq.dsGenerated ? 'Datasheet generado · ' + (eq.dsDate||'') : 'Datasheet pendiente'}
+        ${eq.template ? '' : ' · <span style="color:var(--red)">Sin plantilla</span>'}
+      </div>
+      <div class="eq-actions">
+        <button class="eq-btn" onclick="openModal('${eq.id}')">Editar</button>
+        <button class="eq-btn ${eq.dsGenerated ? 'success' : 'primary'}" onclick="quickDS('${eq.id}')">
+          ${eq.dsGenerated ? '↓ Re-generar' : '↓ Datasheet'}
+        </button>
+      </div>
+    </div>`).join('');
+}
+
+// ════════════════════════
+// MODAL
+// ════════════════════════
+function openModal(id) {
+  const eq = equipment.find(e => e.id === id);
+  if (!eq) return;
+  currentEqId = id;
+
+  document.getElementById('m-tag').textContent = eq.tag;
+  document.getElementById('m-sub').textContent = eq.name || 'Sin nombre';
+
+  // General (from project)
+  const p = activeProject || {};
+  document.getElementById('fm-proj-num').value    = p.num || '—';
+  document.getElementById('fm-proj-client').value = p.client || '—';
+  document.getElementById('fm-proj-name').value   = p.name || '—';
+  document.getElementById('fm-proj-region').value = p.region || '—';
+  document.getElementById('fm-proj-eng').value    = p.engineer || '—';
+
+  // From Claude
+  document.getElementById('fm-tag').value      = eq.tag || '';
+  document.getElementById('fm-type').value     = eq.type || '';
+  document.getElementById('fm-name').value     = eq.name || '';
+  document.getElementById('fm-area').value     = eq.area || '';
+  document.getElementById('fm-capacity').value = eq.capacity || '';
+  document.getElementById('fm-power').value    = eq.power || '';
+  document.getElementById('fm-pressure').value = eq.pressure || '';
+  document.getElementById('fm-temp').value     = eq.temperature || '';
+  document.getElementById('fm-size').value     = eq.size || '';
+  document.getElementById('fm-material').value = eq.material || '';
+
+  // User fields
+  document.getElementById('fm-density').value    = eq.density || '';
+  document.getElementById('fm-abrasion').value   = eq.abrasion || '';
+  document.getElementById('fm-status').value     = eq.status || 'activo';
+  document.getElementById('fm-criticality').value= eq.criticality || '';
+  document.getElementById('fm-notes').value      = eq.notes || '';
+
+  document.getElementById('modal-overlay').classList.add('show');
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('show');
+  currentEqId = null;
+}
+function closeModalBg(e) {
+  if (e.target === document.getElementById('modal-overlay')) closeModal();
+}
+
+function saveEquipment() {
+  const eq = equipment.find(e => e.id === currentEqId);
+  if (!eq) return;
+
+  eq.tag         = document.getElementById('fm-tag').value;
+  eq.type        = document.getElementById('fm-type').value;
+  eq.name        = document.getElementById('fm-name').value;
+  eq.area        = document.getElementById('fm-area').value;
+  eq.capacity    = document.getElementById('fm-capacity').value;
+  eq.power       = document.getElementById('fm-power').value;
+  eq.pressure    = document.getElementById('fm-pressure').value;
+  eq.temperature = document.getElementById('fm-temp').value;
+  eq.size        = document.getElementById('fm-size').value;
+  eq.material    = document.getElementById('fm-material').value;
+  eq.density     = document.getElementById('fm-density').value;
+  eq.abrasion    = document.getElementById('fm-abrasion').value;
+  eq.status      = document.getElementById('fm-status').value;
+  eq.criticality = document.getElementById('fm-criticality').value;
+  eq.notes       = document.getElementById('fm-notes').value;
+
+  saveToProject();
+  renderStats();
+  renderAreaChips();
+  renderGrid();
+  SHARED.toast(`${eq.tag} guardado`, 'success');
+}
+
+// ════════════════════════
+// DATASHEET GENERATION
+// ════════════════════════
+function quickDS(id) {
+  const eq = equipment.find(e => e.id === id);
+  if (!eq) return;
+  generateDatasheetForEq(eq);
+}
+
+function generateDatasheet() {
+  saveEquipment();
+  const eq = equipment.find(e => e.id === currentEqId);
+  if (!eq) return;
+  generateDatasheetForEq(eq);
+  closeModal();
+}
+
+function generateDatasheetForEq(eq) {
+  if (!eq.template) {
+    SHARED.toast(`No hay plantilla asignada para ${eq.tag}. Configúrala en el Módulo 01.`, 'warning');
+    return;
+  }
+
+  const p = activeProject || {};
+  const date = new Date().toLocaleDateString('es-MX');
+
+  // Build datasheet data
+  const data = {
+    // General
+    proyecto:   p.name || '',
+    numero:     p.num || '',
+    cliente:    p.client || '',
+    region:     p.region || '',
+    ingeniero:  p.engineer || '',
+    fecha:      date,
+    // Claude Vision
+    tag:        eq.tag,
+    servicio:   eq.name,
+    tipo:       eq.type,
+    area:       eq.area,
+    capacidad:  eq.capacity,
+    potencia:   eq.power,
+    presion:    eq.pressure,
+    temperatura:eq.temperature,
+    tamaño:     eq.size,
+    material:   eq.material,
+    // Usuario
+    densidad:   eq.density,
+    abrasividad:eq.abrasion,
+    estado:     eq.status,
+    criticidad: eq.criticality,
+    notas:      eq.notes,
+  };
+
+  // Generate simple Excel via CSV for now (full Excel with template requires xlsx library)
+  generateCSVDatasheet(eq, data);
+
+  // Mark as generated
+  eq.dsGenerated = true;
+  eq.dsDate = date;
+  saveToProject();
+  renderStats();
+  renderGrid();
+  SHARED.toast(`Datasheet ${eq.tag} generado`, 'success');
+}
+
+function generateCSVDatasheet(eq, data) {
+  const rows = [
+    ['DATASHEET — ' + eq.tag, ''],
+    [''],
+    ['DATOS GENERALES DEL PROYECTO', ''],
+    ['Proyecto', data.proyecto],
+    ['Número', data.numero],
+    ['Cliente', data.cliente],
+    ['Región / Planta', data.region],
+    ['Ingeniero', data.ingeniero],
+    ['Fecha', data.fecha],
+    [''],
+    ['DATOS DEL EQUIPO (P&ID)', ''],
+    ['TAG / Clave', data.tag],
+    ['Nombre / Servicio', data.servicio],
+    ['Tipo', data.tipo],
+    ['Área', data.area],
+    ['Capacidad', data.capacidad],
+    ['Potencia', data.potencia],
+    ['Presión de diseño', data.presion],
+    ['Temperatura de diseño', data.temperatura],
+    ['Tamaño', data.tamaño],
+    ['Material', data.material],
+    [''],
+    ['DATOS DEL INGENIERO', ''],
+    ['Densidad (ton/m³)', data.densidad],
+    ['Abrasividad', data.abrasividad],
+    ['Estado operativo', data.estado],
+    ['Criticidad', data.criticidad],
+    ['Notas', data.notas],
+    [''],
+    ['Plantilla base', eq.template],
+    ['Generado el', data.fecha],
+  ];
+
+  const csv = rows.map(r => r.map(c => `"${String(c||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `DS_${eq.tag}_${data.numero || 'PRY'}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function exportAll() {
+  const doneEqs = equipment.filter(e => e.dsGenerated);
+  if (!doneEqs.length) {
+    const pending = equipment.filter(e => !e.dsGenerated);
+    if (pending.length) {
+      if (confirm(`Hay ${pending.length} equipos sin datasheet. ¿Generar todos ahora?`)) {
+        equipment.forEach(eq => { if (!eq.dsGenerated) generateDatasheetForEq(eq); });
+      }
+    } else {
+      SHARED.toast('No hay equipos cargados', 'warning');
+    }
+    return;
+  }
+  // Export all as individual CSVs
+  equipment.forEach((eq, i) => {
+    setTimeout(() => generateDatasheetForEq(eq), i * 300);
+  });
+  SHARED.toast(`Generando ${equipment.length} datasheets…`, 'info');
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+init();
+</script>
+</body>
+</html>
