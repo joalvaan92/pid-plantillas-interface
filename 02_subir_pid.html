@@ -473,15 +473,13 @@ function setStep(stepId, state, steps) {
 
 function renderSteps(steps) {
   document.getElementById('status-card').classList.add('show');
-  document.getElementById('status-steps').innerHTML = steps.map(s => {
+  document.getElementById('status-steps').innerHTML = steps.map(function(s) {
     const state = stepStates[s.id] || 'waiting';
-    return `
-    <div class="status-step">
-      <div class="step-dot ${state}">
-        ${state === 'done' ? '✓' : state === 'error' ? '✗' : ''}
-      </div>
-      <span class="step-txt ${state}">${s.label}</span>
-    </div>`;
+    const icon  = state === 'done' ? '✓' : state === 'error' ? '✗' : '';
+    return '<div class="status-step">' +
+      '<div class="step-dot ' + state + '">' + icon + '</div>' +
+      '<span class="step-txt ' + state + '">' + s.label + '</span>' +
+      '</div>';
   }).join('');
 }
 
@@ -525,6 +523,14 @@ async function analyze() {
 // VISION MODE
 // ════════════════════════
 async function analyzeVision() {
+  // Validate config before starting
+  if (!CONFIG.apiKey || CONFIG.apiKey.trim() === '') {
+    throw new Error('API Key vacía. Abre config.js y agrega tu API key de Anthropic (sk-ant-...)');
+  }
+  if (!CONFIG.model) {
+    throw new Error('Modelo no configurado en config.js');
+  }
+
   const steps = STEPS_VISION;
   initSteps(steps);
 
@@ -582,8 +588,17 @@ async function analyzeVision() {
   });
 
   if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new Error(`API Error ${response.status}: ${err?.error?.message || 'Sin detalle'}`);
+    let errMsg = 'Error ' + response.status;
+    try {
+      const err = await response.json();
+      errMsg = err?.error?.message || errMsg;
+      // Common errors
+      if (response.status === 401) errMsg = 'API Key inválida o vacía. Verifica config.js';
+      if (response.status === 400) errMsg = 'Petición inválida: ' + errMsg;
+      if (response.status === 429) errMsg = 'Límite de uso alcanzado. Intenta en unos minutos';
+      if (response.status === 529) errMsg = 'Servidor saturado. Intenta en unos segundos';
+    } catch(e) {}
+    throw new Error(errMsg);
   }
 
   const data    = await response.json();
@@ -853,8 +868,9 @@ function showResults() {
 
   // Tag chips
   document.getElementById('tag-chips').innerHTML = analysisResult.map(eq => {
-    const hasTemplate = !!eq.template;
-    return `<span class="tag-chip ${hasTemplate ? '' : 'no-template'}" title="${hasTemplate ? 'Plantilla: '+eq.template : 'Sin plantilla asignada'}">${eq.tag}</span>`;
+    const cls   = eq.template ? 'tag-chip' : 'tag-chip no-template';
+    const title = eq.template ? 'Plantilla: ' + eq.template : 'Sin plantilla asignada';
+    return '<span class="' + cls + '" title="' + title + '">' + eq.tag + '</span>';
   }).join('');
 
   document.getElementById('next-btn').classList.add('show');
@@ -862,35 +878,25 @@ function showResults() {
 }
 
 function goToValidation() {
-  // Detectar si hay equipos existentes en el proyecto activo
   try {
     const activeProject = JSON.parse(localStorage.getItem('pid_active_project') || 'null');
     if (activeProject && activeProject.equipment && activeProject.equipment.length > 0) {
       const existingTags = new Set(activeProject.equipment.map(e => e.tag));
       const newTags      = analysisResult.filter(e => !existingTags.has(e.tag));
       const missingTags  = activeProject.equipment.filter(e => !analysisResult.find(r => r.tag === e.tag));
-
       if (newTags.length > 0 || missingTags.length > 0) {
-        let msg = `Comparación con proyecto "${activeProject.name}":
-
-`;
-        if (newTags.length)    msg += `✓ ${newTags.length} equipo(s) NUEVO(S) detectado(s)
-`;
-        if (missingTags.length) msg += `⚠ ${missingTags.length} equipo(s) no encontrado(s) en este plano
-`;
-        msg += '
-¿Continuar con la validación de TAGs?';
-        if (!confirm(msg)) return;
+        const lines = ['Comparacion con proyecto "' + activeProject.name + '":'];
+        if (newTags.length)     lines.push('+ ' + newTags.length + ' equipo(s) NUEVO(S) detectado(s)');
+        if (missingTags.length) lines.push('! ' + missingTags.length + ' equipo(s) no encontrado(s) en este plano');
+        lines.push('');
+        lines.push('Continuar con la validacion de TAGs?');
+        if (!confirm(lines.join('\n'))) return;
       }
     }
   } catch(e) { console.warn('merge check error:', e); }
-
   window.location.href = '03_validar_tags.html';
 }
 
-// ════════════════════════
-// UTILS
-// ════════════════════════
 function showError(msg) {
   const box = document.getElementById('error-box');
   box.textContent = '⚠ ' + msg;
@@ -900,8 +906,14 @@ function showError(msg) {
 }
 
 function extractJSON(txt) {
-  const m = txt.match(/\{[\s\S]*\}/);
+  // Strip markdown code fences if present (```json ... ``` or ``` ... ```)
+  const stripped = txt.replace(/^```[\w]*\n?/m, '').replace(/```\s*$/m, '').trim();
+  // Try full stripped text first
+  try { return JSON.parse(stripped); } catch(e) {}
+  // Try finding JSON object within text
+  const m = stripped.match(/\{[\s\S]*\}/);
   if (m) { try { return JSON.parse(m[0]); } catch(e) {} }
+  // Try original
   try { return JSON.parse(txt.trim()); } catch(e) {}
   return null;
 }
