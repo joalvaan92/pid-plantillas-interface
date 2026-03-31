@@ -178,7 +178,9 @@ main{max-width:1200px;margin:0 auto;padding:2rem 2rem 5rem;position:relative;z-i
   </div>
   <div class="hdr-right">
     <a href="02_subir_pid.html" class="hdr-btn">+ Analizar P&ID</a>
-    <button class="hdr-btn primary" id="export-all-btn" onclick="exportAll()">↓ Exportar todos</button>
+    <button class="hdr-btn" onclick="openCatalog()">Catálogo</button>
+    <button class="hdr-btn" onclick="exportEquipmentList()" style="border-color:var(--amber-mi);color:var(--amber);">↓ Lista CSV</button>
+    <button class="hdr-btn primary" id="export-all-btn" onclick="exportAll()">↓ Datasheets</button>
   </div>
 </header>
 
@@ -710,6 +712,43 @@ function generateCSVDatasheet(eq, data) {
   URL.revokeObjectURL(url);
 }
 
+function exportEquipmentList() {
+  if (!equipment.length) { SHARED.toast('No hay equipos cargados', 'warning'); return; }
+
+  const p    = activeProject || {};
+  const date = new Date().toLocaleDateString('es-MX');
+
+  const headers = ['No','TAG','Nombre','Tipo','Clase','Área','Potencia','Capacidad','Tamaño','Presión','Temperatura','Material','Estado','Criticidad','Datasheet'];
+  const rows = equipment.map((eq, i) => [
+    i + 1, eq.tag, eq.name || '', eq.type || '', eq.clase || '',
+    eq.area || '', eq.power || '', eq.capacity || '', eq.size || '',
+    eq.pressure || '', eq.temperature || '', eq.material || '',
+    eq.status || '', eq.criticality || '',
+    eq.dsGenerated ? 'Generado' : 'Pendiente',
+  ]);
+
+  const meta = [
+    ['LISTADO DE EQUIPOS CONFIRMADOS'],
+    ['Proyecto:', p.name || '—', 'No:', p.num || '—'],
+    ['Cliente:', p.client || '—', 'Planta:', p.region || '—'],
+    ['Ingeniero:', p.engineer || '—', 'Fecha:', date],
+    ['Total equipos:', equipment.length, 'Datasheets generados:', equipment.filter(e => e.dsGenerated).length],
+    [],
+    headers,
+    ...rows,
+  ];
+
+  const csv  = meta.map(r => r.map(c => `"${String(c ?? '').replace(/"/g,'""')}"`).join(',')).join('
+');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  const a    = document.createElement('a');
+  a.href     = URL.createObjectURL(blob);
+  a.download = `Equipos_${p.num || 'PRY'}_${date.replace(/[/]/g,'-')}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  SHARED.toast(`Lista de ${equipment.length} equipos exportada`, 'success');
+}
+
 function exportAll() {
   const doneEqs = equipment.filter(e => e.dsGenerated);
   if (!doneEqs.length) {
@@ -734,8 +773,77 @@ function esc(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); closeCatalog(); } });
 init();
+
+// ════════════════════════
+// CATÁLOGO DE EQUIPOS
+// ════════════════════════
+function openCatalog() {
+  const saved = localStorage.getItem('pid_equipment_catalog');
+  if (saved) {
+    try {
+      const list = JSON.parse(saved);
+      document.getElementById('catalog-input').value =
+        list.map(e => [e.tag, e.name, e.type].join(', ')).join('\n');
+      document.getElementById('catalog-count').textContent =
+        list.length + ' equipos en el catálogo';
+    } catch {}
+  }
+  document.getElementById('catalog-overlay').classList.add('show');
+}
+function closeCatalog() {
+  document.getElementById('catalog-overlay').classList.remove('show');
+}
+function saveCatalog() {
+  const raw   = document.getElementById('catalog-input').value.trim();
+  const lines = raw.split('\n').filter(l => l.trim());
+  const list  = lines.map(line => {
+    const parts = line.split(',').map(s => s.trim());
+    return { tag: parts[0]||'', name: parts[1]||'', type: parts[2]||'' };
+  }).filter(e => e.tag);
+
+  localStorage.setItem('pid_equipment_catalog', JSON.stringify(list));
+  document.getElementById('catalog-count').textContent = list.length + ' equipos guardados';
+  SHARED.toast(list.length + ' equipos en catálogo guardados', 'success');
+  closeCatalog();
+}
+function clearCatalog() {
+  localStorage.removeItem('pid_equipment_catalog');
+  document.getElementById('catalog-input').value = '';
+  document.getElementById('catalog-count').textContent = 'Catálogo limpiado';
+  SHARED.toast('Catálogo limpiado', 'info');
+}
 </script>
+
+<!-- MODAL CATÁLOGO -->
+<div class="overlay" id="catalog-overlay" onclick="if(event.target===this)closeCatalog()">
+  <div class="modal" style="max-width:500px;">
+    <div class="modal-hdr">
+      <div>
+        <div class="modal-tag" style="font-size:16px;color:var(--teal);">Catálogo de Equipos</div>
+        <div class="modal-sub">Pega tu listado para mejorar la detección con Claude Vision</div>
+      </div>
+      <button class="modal-x" onclick="closeCatalog()">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:12px;color:var(--txt2);margin-bottom:12px;line-height:1.7;">
+        Pega tu listado de equipos en el formato: <br>
+        <code style="font-family:var(--mono);font-size:11px;background:var(--s3);padding:2px 6px;border-radius:4px;">TAG, Nombre, Tipo</code> — uno por línea.<br>
+        Ejemplo: <code style="font-family:var(--mono);font-size:11px;background:var(--s3);padding:2px 6px;border-radius:4px;">VC-101, Ventilador primario, Ventilador</code>
+      </div>
+      <textarea id="catalog-input" style="width:100%;height:280px;background:var(--bg);border:1px solid var(--border2);border-radius:var(--r);padding:12px;color:var(--txt);font-family:var(--mono);font-size:12px;outline:none;resize:vertical;line-height:1.7;" placeholder="VC-101, Ventilador primario, Ventilador&#10;BC-101, Banda transportadora, Banda&#10;VR-201, Válvula rotatoria, Válvula Rotatoria&#10;..."></textarea>
+      <div style="font-size:11px;color:var(--txt3);margin-top:8px;" id="catalog-count"></div>
+    </div>
+    <div class="modal-ftr">
+      <button class="btn-cancel" onclick="clearCatalog()">Limpiar catálogo</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-cancel" onclick="closeCatalog()">Cancelar</button>
+        <button class="btn-save" onclick="saveCatalog()">Guardar catálogo</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>

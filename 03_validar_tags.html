@@ -322,7 +322,10 @@ main{max-width:1000px;margin:0 auto;padding:2rem 2rem 5rem;position:relative;z-i
     <div class="footer-hint" id="footer-hint">Acepta o rechaza cada TAG para continuar</div>
     <div class="footer-btns">
       <button class="btn-secondary" onclick="window.location.href='02_subir_pid.html'">← Volver</button>
-      <button class="btn-primary green" id="confirm-btn" onclick="confirm()" disabled>
+      <button class="btn-secondary" id="export-btn" onclick="exportList()" style="border-color:var(--amber-mi);color:var(--amber);" disabled>
+        ↓ Exportar lista
+      </button>
+      <button class="btn-primary green" id="confirm-btn" onclick="confirmTags()" disabled>
         Confirmar y ver equipos →
       </button>
     </div>
@@ -348,6 +351,15 @@ let activeFilter = 'all';
 // ════════════════════════
 function loadTags() {
   rawTags = SHARED.getTags();
+
+  // Verificar que los tags tienen un timestamp reciente (menos de 2 horas)
+  // para evitar mostrar resultados de análisis anteriores
+  const analysisTs = localStorage.getItem('pid_analysis_timestamp');
+  const twoHours   = 2 * 60 * 60 * 1000;
+  if (analysisTs && (Date.now() - parseInt(analysisTs)) > twoHours) {
+    SHARED.saveTags([]);
+    rawTags = [];
+  }
 
   if (!rawTags.length) {
     document.getElementById('tag-list').innerHTML = `
@@ -464,6 +476,10 @@ function updateStats() {
   document.getElementById('st-no').textContent    = rejected;
   document.getElementById('st-man').textContent   = manualTags.length;
 
+  // Enable export button if there are any tags
+  const exportBtn = document.getElementById('export-btn');
+  if (exportBtn) exportBtn.disabled = allTags().length === 0;
+
   const confirmBtn  = document.getElementById('confirm-btn');
   const hintEl      = document.getElementById('footer-hint');
 
@@ -579,34 +595,82 @@ function confirm() {
 // UTILS
 // ════════════════════════
 function guessType(tag) {
-  const p = tag.split('-')[0].toUpperCase();
-  if (/^(VR)/.test(p)) return 'Válvula Rotatoria';
-  if (/^(PSV|PRV)/.test(p)) return 'Válvula de Seguridad';
-  if (/^(HV|XV|MOV|CV|FCV|PCV|LCV)/.test(p)) return 'Válvula de Control';
-  if (/^(PI|PT|PIC|PDT|PSH|PSL)/.test(p)) return 'Instrumento de Presión';
-  if (/^(FI|FT|FIC|FM)/.test(p)) return 'Medidor de Flujo';
-  if (/^(TI|TT|TIC|TE)/.test(p)) return 'Instrumento de Temperatura';
-  if (/^(LI|LT|LIC|LE)/.test(p)) return 'Instrumento de Nivel';
-  if (/^(AI|AT|AG)/.test(p)) return 'Analizador';
-  if (/^(P|PP)$/.test(p)) return 'Bomba';
-  if (/^(C|CP)$/.test(p)) return 'Compresor';
-  if (/^(E|HE)/.test(p)) return 'Intercambiador de Calor';
-  if (/^(T|TK)/.test(p)) return 'Tanque';
-  if (/^(V|VL)$/.test(p)) return 'Recipiente';
-  if (/^(M|MO)/.test(p)) return 'Motor';
-  if (/^(R|RX)/.test(p)) return 'Reactor';
-  if (/^(F|FL)$/.test(p)) return 'Filtro';
-  return 'Instrumento';
+  const prefix = tag.split('-')[0].toUpperCase();
+  if (typeof CONFIG !== 'undefined' && CONFIG.tagMapping) {
+    const found = CONFIG.tagMapping.find(e => e.prefix === prefix);
+    if (found) return found.type;
+  }
+  return 'Equipo';
 }
-
 function guessName(tag) {
-  const t = guessType(tag);
-  const n = tag.includes('-') ? tag.split('-').slice(1).join('-') : '';
-  return (t + ' ' + n).trim();
+  const prefix = tag.split('-')[0].toUpperCase();
+  if (typeof CONFIG !== 'undefined' && CONFIG.tagMapping) {
+    const found = CONFIG.tagMapping.find(e => e.prefix === prefix);
+    if (found) return found.type + ' ' + (tag.includes('-') ? tag.split('-').slice(1).join('-') : '');
+  }
+  return tag;
 }
 
 function esc(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ════════════════════════
+// EXPORT
+// ════════════════════════
+function exportList() {
+  const all = allTags();
+  if (!all.length) { SHARED.toast('No hay TAGs para exportar', 'warning'); return; }
+
+  const project = (() => { try { return JSON.parse(localStorage.getItem('pid_active_project') || 'null'); } catch { return null; } })();
+  const projName = project?.name || 'Sin proyecto';
+  const projNum  = project?.num  || '';
+  const date     = new Date().toLocaleDateString('es-MX');
+
+  // Build CSV with BOM for Excel
+  const headers = ['No', 'TAG', 'Nombre', 'Tipo', 'Clase', 'Área', 'Estado', 'Potencia', 'Capacidad', 'Tamaño', 'Presión', 'Temperatura', 'Material', 'Origen'];
+  const rows = all.map((t, i) => {
+    const state = tagStates[t.id] || 'pending';
+    const stateLabel = state === 'accepted' ? 'Aceptado' : state === 'rejected' ? 'Rechazado' : 'Pendiente';
+    return [
+      i + 1,
+      t.tag,
+      t.name || '',
+      t.type || '',
+      t.clase || '',
+      t.area || '',
+      stateLabel,
+      t.power || '',
+      t.capacity || '',
+      t.size || '',
+      t.pressure || '',
+      t.temperature || '',
+      t.material || '',
+      t.isManual ? 'Manual' : t.source === 'dxf' ? 'DXF' : 'Claude Vision',
+    ];
+  });
+
+  // Header info rows
+  const meta = [
+    ['LISTADO DE EQUIPOS — P&ID EXTRACTOR'],
+    ['Proyecto:', projName, 'No:', projNum],
+    ['Fecha:', date, 'Total equipos:', all.length],
+    ['Aceptados:', all.filter(t => tagStates[t.id] === 'accepted').length,
+     'Pendientes:', all.filter(t => !tagStates[t.id] || tagStates[t.id] === 'pending').length],
+    [],
+    headers,
+    ...rows,
+  ];
+
+  const csv = meta.map(r => r.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('
+');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `Listado_Equipos_${projNum || 'PRY'}_${date.replace(/\//g,'-')}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  SHARED.toast(`Exportando ${all.length} equipos…`, 'success');
 }
 
 // ════════════════════════

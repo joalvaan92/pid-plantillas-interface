@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>P&ID — Catálogo de Equipos</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#0c0e14;--s1:#13161f;--s2:#1a1e2b;--s3:#222637;
+  --border:#252a3a;--border2:#333b52;
+  --teal:#00c9a7;--teal-lo:#00c9a712;--teal-mi:#00c9a730;
+  --amber:#f0a500;--amber-lo:#f0a50015;--amber-mi:#f0a50040;
+  --red:#ff4d6d;--red-lo:#ff4d6d15;--red-mi:#ff4d6d40;
+  --green:#22c55e;--green-lo:#22c55e12;--green-mi:#22c55e35;
+  --purple:#7f77dd;--purple-lo:#7f77dd12;--purple-mi:#7f77dd35;
+  --txt:#dde3f0;--txt2:#7c87a0;--txt3:#424d64;
+  --mono:'IBM Plex Mono',monospace;--sans:'Syne',sans-serif;
+  --r:10px;--rlg:16px;
+}
+body{font-family:var(--sans);background:var(--bg);color:var(--txt);min-height:100vh;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:48px 48px;opacity:.2;pointer-events:none;z-index:0;}
+
+header{background:var(--s1);border-bottom:1px solid var(--border);padding:0 2rem;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.logo{display:flex;align-items:center;gap:10px;}
+.logo-mark{width:30px;height:30px;background:var(--teal);border-radius:7px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:9px;font-weight:600;color:#0c0e14;line-height:1.2;text-align:center;}
+.breadcrumb{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--txt2);}
+.breadcrumb a{color:var(--txt2);text-decoration:none;transition:color .15s;}
+.breadcrumb a:hover{color:var(--txt);}
+.breadcrumb span{color:var(--txt3);}
+.breadcrumb strong{color:var(--purple);}
+.hdr-right{display:flex;align-items:center;gap:8px;}
+.hdr-btn{padding:7px 14px;border-radius:var(--r);border:1px solid var(--border);background:transparent;color:var(--txt2);font-family:var(--sans);font-size:12px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:all .15s;}
+.hdr-btn:hover{background:var(--s2);color:var(--txt);}
+.hdr-btn.primary{background:var(--purple);border-color:var(--purple);color:#fff;font-weight:600;}
+.hdr-btn.primary:hover{filter:brightness(1.1);}
+.admin-badge{font-family:var(--mono);font-size:10px;padding:3px 10px;border-radius:4px;background:var(--purple-lo);color:var(--purple);border:1px solid var(--purple-mi);letter-spacing:1px;}
+.viewer-badge{font-family:var(--mono);font-size:10px;padding:3px 10px;border-radius:4px;background:var(--s3);color:var(--txt2);border:1px solid var(--border);letter-spacing:1px;}
+
+main{max-width:1200px;margin:0 auto;padding:2rem 2rem 5rem;position:relative;z-index:1;}
+
+/* GH STATUS */
+.gh-bar{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;gap:1rem;flex-wrap:wrap;}
+.gh-info{display:flex;align-items:center;gap:10px;}
+.gh-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.gh-dot.ok{background:var(--green);}
+.gh-dot.err{background:var(--red);}
+.gh-dot.loading{background:var(--amber);animation:pulse 1s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.gh-txt{font-size:13px;color:var(--txt2);}
+.gh-txt strong{color:var(--teal);font-family:var(--mono);}
+
+/* TOOLBAR */
+.toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;gap:1rem;flex-wrap:wrap;}
+.toolbar-left{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.search-wrap{position:relative;}
+.search-in{background:var(--s1);border:1px solid var(--border2);border-radius:var(--r);padding:8px 12px 8px 34px;color:var(--txt);font-family:var(--sans);font-size:13px;outline:none;transition:border-color .15s;width:240px;}
+.search-in:focus{border-color:var(--purple);}
+.search-in::placeholder{color:var(--txt3);}
+.search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--txt3);font-size:14px;}
+.filter-sel{background:var(--s1);border:1px solid var(--border2);border-radius:var(--r);padding:8px 12px;color:var(--txt);font-family:var(--sans);font-size:13px;outline:none;cursor:pointer;appearance:none;}
+.filter-sel:focus{border-color:var(--purple);}
+
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.5rem;}
+.stat-box{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:10px 14px;text-align:center;}
+.stat-num{font-family:var(--mono);font-size:22px;font-weight:600;display:block;}
+.stat-lbl{font-size:10px;color:var(--txt2);font-family:var(--mono);letter-spacing:.5px;}
+.stat-box.c-teal .stat-num{color:var(--teal);}
+.stat-box.c-green .stat-num{color:var(--green);}
+.stat-box.c-amber .stat-num{color:var(--amber);}
+.stat-box.c-purple .stat-num{color:var(--purple);}
+
+/* CATALOG GRID */
+.catalog-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;}
+
+.cat-card{background:var(--s1);border:1px solid var(--border);border-radius:var(--rlg);overflow:hidden;transition:all .2s;position:relative;}
+.cat-card:hover{border-color:var(--border2);transform:translateY(-2px);}
+.cat-card.has-photo::after{display:none;}
+
+.cat-photo{
+  width:100%;height:140px;object-fit:cover;
+  background:var(--s2);display:flex;align-items:center;justify-content:center;
+}
+.cat-photo img{width:100%;height:140px;object-fit:cover;}
+.cat-photo-placeholder{
+  width:100%;height:140px;background:var(--s2);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:8px;color:var(--txt3);font-size:12px;font-family:var(--mono);
+}
+.cat-photo-icon{font-size:32px;opacity:.3;}
+
+.cat-body{padding:1rem;}
+.cat-prefix{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--purple);background:var(--purple-lo);padding:2px 8px;border-radius:4px;border:1px solid var(--purple-mi);display:inline-block;margin-bottom:6px;}
+.cat-name{font-size:14px;font-weight:700;margin-bottom:2px;line-height:1.3;}
+.cat-clase{font-size:11px;color:var(--txt2);font-family:var(--mono);margin-bottom:10px;}
+.cat-desc{font-size:12px;color:var(--txt2);line-height:1.6;margin-bottom:10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+
+.cat-specs{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;}
+.spec-tag{font-size:10px;font-family:var(--mono);padding:2px 7px;border-radius:4px;background:var(--s3);color:var(--txt2);border:1px solid var(--border);}
+
+.cat-providers{font-size:11px;color:var(--txt3);font-family:var(--mono);margin-bottom:10px;}
+.cat-providers span{color:var(--teal);}
+
+.cat-actions{display:flex;gap:6px;}
+.cat-btn{flex:1;padding:7px;border-radius:var(--r);border:1px solid var(--border);background:transparent;color:var(--txt2);font-family:var(--sans);font-size:12px;cursor:pointer;transition:all .15s;text-align:center;}
+.cat-btn:hover{background:var(--s2);color:var(--txt);}
+.cat-btn.primary{background:var(--purple);border-color:var(--purple);color:#fff;font-weight:600;}
+.cat-btn.primary:hover{filter:brightness(1.1);}
+.cat-btn.danger:hover{background:var(--red-lo);color:var(--red);border-color:var(--red-mi);}
+
+.empty-state{text-align:center;padding:4rem 2rem;color:var(--txt3);grid-column:1/-1;}
+.empty-icon{font-size:48px;display:block;margin-bottom:1rem;opacity:.25;}
+.empty-title{font-size:18px;font-weight:700;color:var(--txt2);margin-bottom:8px;}
+
+/* MODAL */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:1000;align-items:flex-start;justify-content:center;padding:2rem 1.5rem;backdrop-filter:blur(6px);overflow-y:auto;}
+.overlay.show{display:flex;}
+.modal{background:var(--s1);border:1px solid var(--border2);border-radius:var(--rlg);width:100%;max-width:620px;margin:auto;}
+.modal-hdr{padding:1.25rem 1.5rem 1rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:1rem;position:sticky;top:0;background:var(--s1);z-index:10;border-radius:var(--rlg) var(--rlg) 0 0;}
+.modal-title{font-size:17px;font-weight:700;letter-spacing:-.3px;}
+.modal-x{background:var(--s2);border:1px solid var(--border);border-radius:7px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--txt2);font-size:16px;transition:all .15s;font-family:var(--sans);flex-shrink:0;}
+.modal-x:hover{color:var(--txt);}
+.modal-body{padding:1.5rem;}
+.modal-ftr{padding:1rem 1.5rem 1.5rem;display:flex;gap:8px;justify-content:flex-end;border-top:1px solid var(--border);}
+
+.f-sec{font-family:var(--mono);font-size:10px;letter-spacing:2px;color:var(--txt3);margin:0 0 10px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+.f-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1.25rem;}
+.f-grp{display:flex;flex-direction:column;gap:4px;}
+.f-grp.full{grid-column:1/-1;}
+.f-lbl{font-size:11px;color:var(--txt2);}
+.f-lbl span{color:var(--red);margin-left:2px;}
+.f-in,.f-sel,.f-ta{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:9px 12px;color:var(--txt);font-family:var(--sans);font-size:13px;outline:none;transition:border-color .15s;width:100%;}
+.f-in.mono{font-family:var(--mono);font-size:12px;}
+.f-in:focus,.f-sel:focus,.f-ta:focus{border-color:var(--purple);}
+.f-ta{resize:vertical;min-height:80px;}
+.f-sel{appearance:none;cursor:pointer;}
+
+/* PHOTO UPLOAD */
+.photo-upload{border:2px dashed var(--border2);border-radius:var(--r);padding:1.25rem;text-align:center;cursor:pointer;transition:all .2s;position:relative;margin-bottom:1.25rem;}
+.photo-upload:hover{border-color:var(--purple);background:var(--purple-lo);}
+.photo-upload input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.photo-preview{max-width:100%;max-height:200px;border-radius:var(--r);object-fit:cover;display:none;margin:0 auto;}
+.photo-preview.show{display:block;margin-bottom:10px;}
+.photo-hint{font-size:12px;color:var(--txt2);}
+.photo-hint strong{color:var(--purple);}
+
+/* PROVIDERS */
+.provider-list{display:flex;flex-direction:column;gap:8px;margin-bottom:8px;}
+.provider-row{display:flex;gap:8px;align-items:center;}
+.provider-in{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:8px 12px;color:var(--txt);font-family:var(--sans);font-size:13px;outline:none;transition:border-color .15s;}
+.provider-in:focus{border-color:var(--purple);}
+.provider-in::placeholder{color:var(--txt3);}
+.del-prov{background:none;border:1px solid var(--border);border-radius:8px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--txt3);font-size:14px;transition:all .15s;flex-shrink:0;}
+.del-prov:hover{color:var(--red);border-color:var(--red-mi);background:var(--red-lo);}
+.add-prov-btn{padding:7px 14px;border-radius:var(--r);border:1px solid var(--purple-mi);background:var(--purple-lo);color:var(--purple);font-family:var(--sans);font-size:12px;cursor:pointer;transition:all .15s;}
+.add-prov-btn:hover{background:var(--purple-mi);}
+
+.btn-save{padding:9px 24px;border-radius:var(--r);border:none;background:var(--purple);color:#fff;cursor:pointer;font-family:var(--sans);font-size:13px;font-weight:700;transition:filter .15s;}
+.btn-save:hover{filter:brightness(1.1);}
+.btn-cancel{padding:9px 18px;border-radius:var(--r);border:1px solid var(--border2);background:transparent;color:var(--txt2);cursor:pointer;font-family:var(--sans);font-size:13px;transition:all .15s;}
+.btn-cancel:hover{background:var(--s2);color:var(--txt);}
+
+/* SYNC STATUS */
+.status-bar{display:none;align-items:center;gap:12px;background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:12px 16px;margin-bottom:1rem;}
+.status-bar.show{display:flex;}
+.spinner{width:16px;height:16px;border:2px solid var(--border2);border-top-color:var(--purple);border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.status-txt{font-family:var(--mono);font-size:12px;color:var(--txt2);}
+
+/* GitHub upload info */
+.upload-info{background:var(--purple-lo);border:1px solid var(--purple-mi);border-radius:var(--r);padding:12px 16px;margin-bottom:1rem;font-size:12px;color:var(--txt2);line-height:1.7;display:none;}
+.upload-info.show{display:block;}
+.upload-info strong{color:var(--purple);}
+.upload-info code{font-family:var(--mono);font-size:11px;background:var(--s3);padding:1px 5px;border-radius:3px;color:var(--teal);}
+
+::-webkit-scrollbar{width:5px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+@media(max-width:640px){.f-grid,.stats-row{grid-template-columns:1fr 1fr;}.catalog-grid{grid-template-columns:1fr;}main{padding:1.5rem 1rem 4rem;}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-mark">P&amp;<br>ID</div>
+    <div class="breadcrumb">
+      <a href="index.html">Inicio</a>
+      <span>›</span>
+      <strong>Módulo 01 — Catálogo de Equipos</strong>
+    </div>
+  </div>
+  <div class="hdr-right">
+    <span id="role-badge" class="viewer-badge">CARGANDO</span>
+    <button class="hdr-btn" onclick="syncGitHub()">↻ Sincronizar</button>
+    <button class="hdr-btn" id="export-json-btn" onclick="exportCatalogJSON()" style="display:none;">↓ catalog.json</button>
+    <button class="hdr-btn primary" id="new-btn" onclick="openModal()" style="display:none;">+ Nuevo equipo</button>
+    <a href="index.html" class="hdr-btn">← Inicio</a>
+  </div>
+</header>
+
+<main>
+  <!-- GH STATUS -->
+  <div class="gh-bar">
+    <div class="gh-info">
+      <div class="gh-dot loading" id="gh-dot"></div>
+      <div>
+        <div class="gh-txt">Repositorio: <strong id="gh-repo-name">—</strong></div>
+        <div class="gh-txt" style="font-size:11px;margin-top:2px;" id="gh-status-txt">Conectando…</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <a id="gh-link" href="#" target="_blank" class="hdr-btn" style="font-size:11px;">Ver en GitHub ↗</a>
+    </div>
+  </div>
+
+  <div class="status-bar" id="status-bar">
+    <div class="spinner"></div>
+    <span class="status-txt" id="status-txt">Cargando catálogo…</span>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-row">
+    <div class="stat-box c-teal"><span class="stat-num" id="st-total">0</span><div class="stat-lbl">TIPOS DE EQUIPO</div></div>
+    <div class="stat-box c-green"><span class="stat-num" id="st-photo">0</span><div class="stat-lbl">CON FOTO</div></div>
+    <div class="stat-box c-amber"><span class="stat-num" id="st-prov">0</span><div class="stat-lbl">CON PROVEEDOR</div></div>
+    <div class="stat-box c-purple"><span class="stat-num" id="st-clase">0</span><div class="stat-lbl">CLASES</div></div>
+  </div>
+
+  <!-- TOOLBAR -->
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <div class="search-wrap">
+        <span class="search-icon">⌕</span>
+        <input class="search-in" id="search" placeholder="Buscar equipo o prefijo…" oninput="renderGrid()" />
+      </div>
+      <select class="filter-sel" id="filter-clase" onchange="renderGrid()">
+        <option value="">Todas las clases</option>
+      </select>
+      <select class="filter-sel" id="filter-photo" onchange="renderGrid()">
+        <option value="">Todos</option>
+        <option value="yes">Con foto</option>
+        <option value="no">Sin foto</option>
+      </select>
+    </div>
+    <div style="font-family:var(--mono);font-size:11px;color:var(--txt2);" id="count-lbl"></div>
+  </div>
+
+  <div class="catalog-grid" id="catalog-grid"></div>
+</main>
+
+<!-- MODAL NUEVO/EDITAR -->
+<div class="overlay" id="modal-overlay" onclick="closeModalBg(event)">
+  <div class="modal">
+    <div class="modal-hdr">
+      <div class="modal-title" id="modal-title">Nuevo tipo de equipo</div>
+      <button class="modal-x" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- IDENTIFICACIÓN -->
+      <div class="f-sec">IDENTIFICACIÓN</div>
+      <div class="f-grid">
+        <div class="f-grp">
+          <label class="f-lbl">Prefijo TAG<span>*</span></label>
+          <input class="f-in mono" id="f-prefix" placeholder="VCE" maxlength="5" oninput="this.value=this.value.toUpperCase()" />
+        </div>
+        <div class="f-grp">
+          <label class="f-lbl">Clase de activo<span>*</span></label>
+          <select class="f-sel" id="f-clase">
+            <option value="">Seleccionar…</option>
+          </select>
+        </div>
+        <div class="f-grp full">
+          <label class="f-lbl">Nombre / Tipo de equipo<span>*</span></label>
+          <input class="f-in" id="f-name" placeholder="Ventilador Centrífugo" />
+        </div>
+        <div class="f-grp full">
+          <label class="f-lbl">Descripción técnica</label>
+          <textarea class="f-ta" id="f-desc" placeholder="Equipo utilizado para mover grandes volúmenes de aire o gases a presiones relativamente bajas. Ampliamente usado en sistemas de transporte neumático, control de polvos y ventilación de procesos…"></textarea>
+        </div>
+      </div>
+
+      <!-- FOTO -->
+      <div class="f-sec">FOTO DE REFERENCIA</div>
+      <div class="upload-info show" id="upload-info">
+        <strong>Cómo subir fotos:</strong> La foto se guarda localmente para esta sesión.
+        Para que sea permanente y visible a todos los usuarios, sube el archivo a
+        <code>pid-plantillas-/catalogo/fotos/</code> en GitHub con el nombre <code id="foto-filename-hint">PREFIX.jpg</code>
+        y la app la cargará automáticamente.
+      </div>
+      <div class="photo-upload" id="photo-upload-zone">
+        <img class="photo-preview" id="photo-preview" src="" alt="preview" />
+        <div id="photo-placeholder">
+          <div style="font-size:32px;opacity:.3;margin-bottom:8px;">📷</div>
+          <div class="photo-hint">Arrastra una foto aquí o <strong>haz clic para explorar</strong></div>
+          <div style="font-size:11px;color:var(--txt3);margin-top:4px;font-family:var(--mono);">JPG · PNG · WEBP — máx 2MB</div>
+        </div>
+        <input type="file" id="photo-input" accept=".jpg,.jpeg,.png,.webp" />
+      </div>
+
+      <!-- SPECS TÍPICAS -->
+      <div class="f-sec">ESPECIFICACIONES TÍPICAS</div>
+      <div class="f-grid">
+        <div class="f-grp">
+          <label class="f-lbl">Rango de potencia</label>
+          <input class="f-in mono" id="f-power-range" placeholder="5 - 200 HP" />
+        </div>
+        <div class="f-grp">
+          <label class="f-lbl">Rango de capacidad</label>
+          <input class="f-in mono" id="f-cap-range" placeholder="100 - 50,000 CFM" />
+        </div>
+        <div class="f-grp">
+          <label class="f-lbl">Materiales comunes</label>
+          <input class="f-in" id="f-materials" placeholder="Acero al carbón, AISI 316L" />
+        </div>
+        <div class="f-grp">
+          <label class="f-lbl">Vida útil estimada</label>
+          <input class="f-in mono" id="f-life" placeholder="20 años" />
+        </div>
+        <div class="f-grp full">
+          <label class="f-lbl">Notas técnicas adicionales</label>
+          <input class="f-in" id="f-notes" placeholder="Normas aplicables, consideraciones de instalación, etc." />
+        </div>
+      </div>
+
+      <!-- PROVEEDORES -->
+      <div class="f-sec">PROVEEDORES SUGERIDOS</div>
+      <div class="provider-list" id="provider-list"></div>
+      <button class="add-prov-btn" onclick="addProviderField()">+ Agregar proveedor</button>
+
+    </div>
+    <div class="modal-ftr">
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-save" onclick="saveItem()">Guardar en catálogo</button>
+    </div>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script src="shared.js"></script>
+<script>
+if (!SHARED.requireAuth()) {}
+
+// ════════════════════════
+// STATE
+// ════════════════════════
+const user    = SHARED.currentUser();
+const isAdmin = SHARED.isAdmin();
+let catalog   = [];   // full catalog items
+let editingId = null;
+let photoB64  = null; // base64 of selected photo
+
+// GitHub paths
+const GH_API      = `https://api.github.com/repos/${CONFIG.githubUser}/${CONFIG.githubRepo}/contents/`;
+const GH_CATALOG  = `https://raw.githubusercontent.com/${CONFIG.githubUser}/${CONFIG.githubRepo}/${CONFIG.githubBranch}/catalogo/catalog.json`;
+const GH_PHOTOS   = `https://raw.githubusercontent.com/${CONFIG.githubUser}/${CONFIG.githubRepo}/${CONFIG.githubBranch}/catalogo/fotos/`;
+const REPO_URL    = `https://github.com/${CONFIG.githubUser}/${CONFIG.githubRepo}`;
+
+// ════════════════════════
+// INIT
+// ════════════════════════
+document.getElementById('role-badge').textContent = isAdmin ? 'ADMIN' : 'OPERADOR';
+document.getElementById('role-badge').className   = isAdmin ? 'admin-badge' : 'viewer-badge';
+if (isAdmin) { document.getElementById('new-btn').style.display = ''; document.getElementById('export-json-btn').style.display = ''; }
+
+document.getElementById('gh-repo-name').textContent = `${CONFIG.githubUser}/${CONFIG.githubRepo}`;
+document.getElementById('gh-link').href = REPO_URL + '/tree/main/catalogo';
+
+// Populate clase filter from tagMapping
+const clases = [...new Set(CONFIG.tagMapping.map(e => e.clase))].sort();
+const claseFilter = document.getElementById('filter-clase');
+const claseSelect = document.getElementById('f-clase');
+clases.forEach(c => {
+  claseFilter.innerHTML += `<option value="${esc(c)}">${esc(c)}</option>`;
+  claseSelect.innerHTML  += `<option value="${esc(c)}">${esc(c)}</option>`;
+});
+
+loadCatalog();
+
+// ════════════════════════
+// LOAD CATALOG
+// ════════════════════════
+async function loadCatalog() {
+  setStatus(true, 'Cargando catálogo desde GitHub…');
+
+  // Load from localStorage first (instant)
+  const local = localStorage.getItem('pid_catalog');
+  if (local) {
+    try { catalog = JSON.parse(local); } catch {}
+  }
+
+  // If no local, seed from CONFIG.tagMapping as base
+  if (!catalog.length) {
+    catalog = CONFIG.tagMapping.map(e => ({
+      id:        e.prefix,
+      prefix:    e.prefix,
+      clase:     e.clase,
+      name:      e.type,
+      desc:      '',
+      photoUrl:  '',
+      photoB64:  '',
+      powerRange:'',
+      capRange:  '',
+      materials: '',
+      lifeYears: '',
+      notes:     '',
+      providers: [],
+    }));
+    localStorage.setItem('pid_catalog', JSON.stringify(catalog));
+  }
+
+  renderStats();
+  renderGrid();
+
+  // Try GitHub
+  try {
+    const res = await fetch(GH_CATALOG + '?t=' + Date.now());
+    if (res.ok) {
+      const ghCatalog = await res.json();
+      if (Array.isArray(ghCatalog) && ghCatalog.length) {
+        // Merge: GitHub data wins for items that exist there
+        const ghMap = Object.fromEntries(ghCatalog.map(e => [e.prefix, e]));
+        catalog = catalog.map(local => ghMap[local.prefix]
+          ? { ...local, ...ghMap[local.prefix] }
+          : local
+        );
+        // Add any new items from GitHub not in local
+        ghCatalog.forEach(gh => {
+          if (!catalog.find(c => c.prefix === gh.prefix)) catalog.push(gh);
+        });
+        localStorage.setItem('pid_catalog', JSON.stringify(catalog));
+        setGHStatus('ok', `${ghCatalog.length} equipos sincronizados desde GitHub`);
+      } else {
+        setGHStatus('ok', 'Repositorio conectado — catálogo vacío en GitHub, usando catálogo base');
+      }
+    } else {
+      setGHStatus('err', 'catalog.json no encontrado — usando catálogo local');
+    }
+  } catch {
+    setGHStatus('err', 'Sin conexión a GitHub — mostrando catálogo local');
+  }
+
+  setStatus(false);
+  renderStats();
+  renderGrid();
+}
+
+async function syncGitHub() {
+  setStatus(true, 'Sincronizando con GitHub…');
+  catalog = [];
+  localStorage.removeItem('pid_catalog');
+  await loadCatalog();
+  SHARED.toast('Catálogo sincronizado', 'success');
+}
+
+// ════════════════════════
+// RENDER
+// ════════════════════════
+function renderStats() {
+  document.getElementById('st-total').textContent = catalog.length;
+  document.getElementById('st-photo').textContent = catalog.filter(e => e.photoUrl || e.photoB64).length;
+  document.getElementById('st-prov').textContent  = catalog.filter(e => e.providers?.length).length;
+  document.getElementById('st-clase').textContent = new Set(catalog.map(e => e.clase)).size;
+}
+
+function renderGrid() {
+  const search = document.getElementById('search').value.toLowerCase();
+  const fClase = document.getElementById('filter-clase').value;
+  const fPhoto = document.getElementById('filter-photo').value;
+
+  const filtered = catalog.filter(e => {
+    const ms = !search || e.prefix.toLowerCase().includes(search) ||
+               e.name.toLowerCase().includes(search) ||
+               (e.clase||'').toLowerCase().includes(search);
+    const mc = !fClase || e.clase === fClase;
+    const mp = !fPhoto ||
+      (fPhoto === 'yes' && (e.photoUrl || e.photoB64)) ||
+      (fPhoto === 'no'  && !e.photoUrl && !e.photoB64);
+    return ms && mc && mp;
+  });
+
+  document.getElementById('count-lbl').textContent = `${filtered.length} de ${catalog.length} equipos`;
+
+  const grid = document.getElementById('catalog-grid');
+  if (!filtered.length) {
+    grid.innerHTML = `<div class="empty-state">
+      <span class="empty-icon">⬡</span>
+      <div class="empty-title">Sin resultados</div>
+      <p style="font-size:13px;">Ajusta los filtros o la búsqueda.</p>
+    </div>`;
+    return;
+  }
+
+  grid.innerHTML = filtered.map(e => {
+    const photoSrc = e.photoB64 || (e.photoUrl ? e.photoUrl : null);
+    const providers = (e.providers || []).slice(0,3);
+    const specs = [e.powerRange, e.capRange, e.materials].filter(Boolean);
+
+    return `
+    <div class="cat-card">
+      ${photoSrc
+        ? `<div class="cat-photo"><img src="${esc(photoSrc)}" alt="${esc(e.name)}" onerror="this.parentElement.innerHTML='<div class=cat-photo-placeholder><span class=cat-photo-icon>📷</span><span>Sin foto</span></div>'" /></div>`
+        : `<div class="cat-photo-placeholder"><span class="cat-photo-icon">📷</span><span>Sin foto</span></div>`
+      }
+      <div class="cat-body">
+        <span class="cat-prefix">${esc(e.prefix)}</span>
+        <div class="cat-name">${esc(e.name)}</div>
+        <div class="cat-clase">${esc(e.clase)}</div>
+        ${e.desc ? `<div class="cat-desc">${esc(e.desc)}</div>` : ''}
+        ${specs.length ? `<div class="cat-specs">${specs.map(s => `<span class="spec-tag">${esc(s)}</span>`).join('')}</div>` : ''}
+        ${providers.length
+          ? `<div class="cat-providers">Proveedores: <span>${providers.map(p => esc(p.name||p)).join(' · ')}</span></div>`
+          : `<div class="cat-providers" style="color:var(--txt3);">Sin proveedores asignados</div>`
+        }
+        ${isAdmin ? `
+        <div class="cat-actions">
+          <button class="cat-btn" onclick="openModal('${esc(e.prefix)}')">Editar</button>
+          <button class="cat-btn danger" onclick="deleteItem('${esc(e.prefix)}')">Eliminar</button>
+        </div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ════════════════════════
+// MODAL
+// ════════════════════════
+function openModal(prefix) {
+  if (!isAdmin) return;
+  editingId = prefix || null;
+  photoB64  = null;
+
+  if (prefix) {
+    const e = catalog.find(c => c.prefix === prefix);
+    if (!e) return;
+    document.getElementById('modal-title').textContent  = `Editar — ${e.prefix}`;
+    document.getElementById('f-prefix').value           = e.prefix;
+    document.getElementById('f-prefix').disabled        = true;
+    document.getElementById('f-clase').value            = e.clase || '';
+    document.getElementById('f-name').value             = e.name || '';
+    document.getElementById('f-desc').value             = e.desc || '';
+    document.getElementById('f-power-range').value      = e.powerRange || '';
+    document.getElementById('f-cap-range').value        = e.capRange || '';
+    document.getElementById('f-materials').value        = e.materials || '';
+    document.getElementById('f-life').value             = e.lifeYears || '';
+    document.getElementById('f-notes').value            = e.notes || '';
+
+    // Photo
+    const src = e.photoB64 || e.photoUrl || '';
+    if (src) {
+      document.getElementById('photo-preview').src = src;
+      document.getElementById('photo-preview').classList.add('show');
+      document.getElementById('photo-placeholder').style.display = 'none';
+      photoB64 = e.photoB64 || null;
+    } else {
+      resetPhoto();
+    }
+
+    // Providers
+    renderProviders(e.providers || []);
+    document.getElementById('foto-filename-hint').textContent = prefix + '.jpg';
+  } else {
+    document.getElementById('modal-title').textContent = 'Nuevo tipo de equipo';
+    document.getElementById('f-prefix').value          = '';
+    document.getElementById('f-prefix').disabled       = false;
+    document.getElementById('f-clase').value           = '';
+    document.getElementById('f-name').value            = '';
+    document.getElementById('f-desc').value            = '';
+    document.getElementById('f-power-range').value     = '';
+    document.getElementById('f-cap-range').value       = '';
+    document.getElementById('f-materials').value       = '';
+    document.getElementById('f-life').value            = '';
+    document.getElementById('f-notes').value           = '';
+    resetPhoto();
+    renderProviders([]);
+    document.getElementById('foto-filename-hint').textContent = 'PREFIX.jpg';
+  }
+
+  document.getElementById('modal-overlay').classList.add('show');
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('show');
+  editingId = null; photoB64 = null;
+}
+function closeModalBg(e) {
+  if (e.target === document.getElementById('modal-overlay')) closeModal();
+}
+
+// ════════════════════════
+// PHOTO HANDLING
+// ════════════════════════
+const photoInput = document.getElementById('photo-input');
+const photoZone  = document.getElementById('photo-upload-zone');
+
+photoZone.addEventListener('dragover', e => { e.preventDefault(); photoZone.style.borderColor = 'var(--purple)'; });
+photoZone.addEventListener('dragleave', () => { photoZone.style.borderColor = ''; });
+photoZone.addEventListener('drop', e => { e.preventDefault(); photoZone.style.borderColor = ''; if (e.dataTransfer.files[0]) setPhoto(e.dataTransfer.files[0]); });
+photoInput.addEventListener('change', e => { if (e.target.files[0]) setPhoto(e.target.files[0]); });
+
+// Update filename hint when prefix changes
+document.getElementById('f-prefix').addEventListener('input', function() {
+  document.getElementById('foto-filename-hint').textContent = (this.value || 'PREFIX') + '.jpg';
+});
+
+function setPhoto(file) {
+  if (file.size > 2097152) { SHARED.toast('La foto no debe superar 2MB', 'warning'); return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    photoB64 = e.target.result;
+    document.getElementById('photo-preview').src = photoB64;
+    document.getElementById('photo-preview').classList.add('show');
+    document.getElementById('photo-placeholder').style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+
+function resetPhoto() {
+  photoB64 = null;
+  document.getElementById('photo-preview').src = '';
+  document.getElementById('photo-preview').classList.remove('show');
+  document.getElementById('photo-placeholder').style.display = '';
+  photoInput.value = '';
+}
+
+// ════════════════════════
+// PROVIDERS
+// ════════════════════════
+function renderProviders(providers) {
+  const list = document.getElementById('provider-list');
+  list.innerHTML = providers.map((p, i) => `
+    <div class="provider-row" id="prov-${i}">
+      <input class="provider-in" placeholder="Nombre del proveedor" value="${esc(typeof p === 'string' ? p : p.name || '')}" />
+      <input class="provider-in" placeholder="Contacto / web" style="max-width:180px;" value="${esc(typeof p === 'object' ? p.contact || '' : '')}" />
+      <button class="del-prov" onclick="this.parentElement.remove()" title="Quitar">×</button>
+    </div>`).join('');
+}
+
+function addProviderField() {
+  const list = document.getElementById('provider-list');
+  const div  = document.createElement('div');
+  div.className = 'provider-row';
+  div.innerHTML = `
+    <input class="provider-in" placeholder="Nombre del proveedor" />
+    <input class="provider-in" placeholder="Contacto / web" style="max-width:180px;" />
+    <button class="del-prov" onclick="this.parentElement.remove()" title="Quitar">×</button>`;
+  list.appendChild(div);
+  div.querySelector('input').focus();
+}
+
+function getProviders() {
+  return Array.from(document.querySelectorAll('#provider-list .provider-row')).map(row => {
+    const inputs = row.querySelectorAll('input');
+    return { name: inputs[0].value.trim(), contact: inputs[1].value.trim() };
+  }).filter(p => p.name);
+}
+
+// ════════════════════════
+// SAVE / DELETE
+// ════════════════════════
+function saveItem() {
+  const prefix = document.getElementById('f-prefix').value.trim().toUpperCase();
+  const clase  = document.getElementById('f-clase').value;
+  const name   = document.getElementById('f-name').value.trim();
+
+  if (!prefix || !clase || !name) { SHARED.toast('Completa prefijo, clase y nombre', 'warning'); return; }
+
+  const item = {
+    id:         prefix,
+    prefix,
+    clase,
+    name,
+    desc:       document.getElementById('f-desc').value.trim(),
+    photoB64:   photoB64 || '',
+    photoUrl:   editingId ? (catalog.find(c => c.prefix === editingId)?.photoUrl || '') : '',
+    powerRange: document.getElementById('f-power-range').value.trim(),
+    capRange:   document.getElementById('f-cap-range').value.trim(),
+    materials:  document.getElementById('f-materials').value.trim(),
+    lifeYears:  document.getElementById('f-life').value.trim(),
+    notes:      document.getElementById('f-notes').value.trim(),
+    providers:  getProviders(),
+  };
+
+  if (editingId) {
+    const idx = catalog.findIndex(c => c.prefix === editingId);
+    if (idx !== -1) catalog[idx] = item;
+  } else {
+    if (catalog.find(c => c.prefix === prefix)) {
+      SHARED.toast(`El prefijo "${prefix}" ya existe`, 'warning'); return;
+    }
+    catalog.push(item);
+  }
+
+  localStorage.setItem('pid_catalog', JSON.stringify(catalog));
+
+  // Also update CONFIG.tagMapping if new prefix
+  if (!editingId || !CONFIG.tagMapping.find(e => e.prefix === prefix)) {
+    CONFIG.tagMapping = CONFIG.tagMapping.filter(e => e.prefix !== prefix);
+    CONFIG.tagMapping.push({ prefix, type: name, clase });
+  }
+
+  closeModal();
+  renderStats();
+  renderGrid();
+  SHARED.toast(`"${name}" guardado en catálogo`, 'success');
+  showGitHubSaveHint(prefix);
+}
+
+function deleteItem(prefix) {
+  if (!isAdmin) return;
+  const e = catalog.find(c => c.prefix === prefix);
+  if (!confirm(`¿Eliminar "${e?.name || prefix}" del catálogo local?`)) return;
+  catalog = catalog.filter(c => c.prefix !== prefix);
+  localStorage.setItem('pid_catalog', JSON.stringify(catalog));
+  renderStats();
+  renderGrid();
+  SHARED.toast(`"${prefix}" eliminado del catálogo local`, 'info');
+}
+
+function showGitHubSaveHint(prefix) {
+  // Show a toast with instructions to persist to GitHub
+  SHARED.toast(`Guardado localmente. Para persistir: sube catalog.json a GitHub`, 'info', 5000);
+}
+
+// ════════════════════════
+// UTILS
+// ════════════════════════
+function setStatus(show, txt) {
+  document.getElementById('status-bar').classList.toggle('show', show);
+  if (txt) document.getElementById('status-txt').textContent = txt;
+}
+
+function setGHStatus(type, txt) {
+  const dot = document.getElementById('gh-dot');
+  dot.className = 'gh-dot ' + (type === 'ok' ? 'ok' : 'err');
+  document.getElementById('gh-status-txt').textContent = txt;
+}
+
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+// Export catalog as JSON (admin can download and upload to GitHub)
+function exportCatalogJSON() {
+  const blob = new Blob([JSON.stringify(catalog, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'catalog.json';
+  a.click();
+  SHARED.toast('catalog.json descargado — súbelo a GitHub en /catalogo/', 'success', 5000);
+}
+</script>
+</body>
+</html>

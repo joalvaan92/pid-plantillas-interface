@@ -423,11 +423,15 @@ function setFile(file) {
     document.getElementById('drop-sub').textContent   = size + ' · listo';
   }
 
-  // Clear previous results
+  // Limpiar resultados anteriores al seleccionar archivo nuevo
+  analysisResult = null;
   document.getElementById('error-box').classList.remove('show');
   document.getElementById('next-btn').classList.remove('show');
   document.getElementById('results-panel').style.display = 'none';
   document.getElementById('status-card').classList.remove('show');
+  document.getElementById('tag-chips').innerHTML = '';
+  document.getElementById('result-count').textContent = '0';
+  document.getElementById('fi-status').textContent = 'Listo para analizar';
 }
 
 function clearFile() {
@@ -487,6 +491,15 @@ function renderSteps(steps) {
 async function analyze() {
   if (!currentFile) return;
 
+  // Limpiar todo lo anterior antes de empezar
+  analysisResult = null;
+  SHARED.saveTags([]);
+  SHARED.saveEquipment([]);
+  localStorage.removeItem('pid_tag_states');
+  document.getElementById('results-panel').style.display = 'none';
+  document.getElementById('tag-chips').innerHTML = '';
+  document.getElementById('result-count').textContent = '0';
+
   document.getElementById('analyze-btn').disabled = true;
   document.getElementById('error-box').classList.remove('show');
   document.getElementById('next-btn').classList.remove('show');
@@ -501,6 +514,8 @@ async function analyze() {
   } catch(err) {
     showError(err.message);
     document.getElementById('fi-status').textContent = 'Error';
+    SHARED.saveTags([]);
+    analysisResult = null;
   }
 
   document.getElementById('analyze-btn').disabled = false;
@@ -592,26 +607,105 @@ async function analyzeVision() {
 }
 
 function buildVisionPrompt() {
-  return `Eres un experto en ingeniería de procesos industriales. Analiza este P&ID (Diagrama de Tuberías e Instrumentación) e identifica TODOS los equipos e instrumentos visibles.
+  const knownCtx = buildEquipmentContext();
+  return `Eres un experto en ingeniería de procesos industriales de CALIDRA (empresa de cal y minerales).
+Analiza este Diagrama de Flujo de Proceso (DFP) e identifica TODOS los equipos visibles.
 
-Para cada equipo extrae:
-- tag: identificador del equipo (ej: P-101, FT-201, VR-301, E-401)
-- name: nombre o descripción del equipo
-- type: tipo de equipo (Bomba, Compresor, Válvula Rotatoria, Válvula de Control, Tanque, Intercambiador, Reactor, Motor, Filtro, Instrumento de Presión, Instrumento de Temperatura, Instrumento de Nivel, Medidor de Flujo, Analizador, etc.)
-- area: área o zona del proceso donde se ubica (infiere del contexto visual, sección del plano o texto de área)
-- power: potencia si está indicada (con unidades, ej: 15 kW)
-- capacity: capacidad o caudal si está indicado (con unidades, ej: 500 L/h, 10 TPH)
-- size: tamaño o dimensión nominal si está indicado (ej: DN50, 6")
-- pressure: presión de diseño o trabajo si está indicada (ej: 10 bar, 150 PSI)
-- temperature: temperatura de diseño o trabajo si está indicada (ej: 80°C, 200°F)
-- material: material de construcción si está indicado (ej: AISI 316L, Acero al Carbón)
+══ INSTRUCCIÓN CRÍTICA — LEER ANOTACIONES TÉCNICAS ══
+En estos planos cada equipo tiene su TAG y junto a él aparecen sus especificaciones técnicas anotadas.
+DEBES leer y extraer esos datos. Ejemplos reales de estos planos:
+  VCE-102 → 3500 CFM / Ø 10" G.A. / 10 HP   →   capacity=3500 CFM, size=10" G.A., power=10 HP
+  TBA-101 → 150 TPH / 30 HP / 48" A.           →   capacity=150 TPH, power=30 HP, size=48"
+  VRO-201 → 10 TPH / 5 HP / Ø 8"              →   capacity=10 TPH, power=5 HP, size=8"
+Números solos junto a un símbolo (15 HP, 500 CFM, 30 TPH) son datos de ESE equipo.
 
-Responde ÚNICAMENTE con JSON válido, sin texto adicional, sin backticks, sin comentarios:
-{"equipment":[{"tag":"VR-101","name":"Válvula Rotatoria de Alimentación","type":"Válvula Rotatoria","area":"Área de Proceso","power":"2.2 kW","capacity":"10 TPH","size":"DN200","pressure":"","temperature":"","material":"Acero Dúctil"}]}
+══ SISTEMA DE NOMENCLATURA CALIDRA ══
+El TAG tiene formato: [PLANTA]-[PROCESO]-[LINEA]-[PREFIJO]-[NUMERO]
+Ejemplo: TNS-CAL-01-VCE-01 = Planta TNS, Proceso Calcinación, Línea 01, Ventilador Centrífugo #01
 
-Si un campo no está disponible usa cadena vacía "". Extrae TODOS los equipos visibles en el plano.`;
+CATÁLOGO OFICIAL DE PREFIJOS CALIDRA (247 tipos):
+Agitador: AGI
+Alimentador Pesador: ABP, AHP
+Alimentador Volumetrico: ABV, AGR, AHV, APL, ARE, ASV, AVI, AVB, AWO, ADV, VEL
+Almacenamiento: SIL, SPI, TAL, TAP, TAM, TRE, TPU, TRM, VCA
+Ambiental y Limpieza: APO, BAR, CPO, CPB, CAG, ELC, SCR, FMR
+Analizador: AGC, ARX, UAA
+Bomba: BCE, BDP, BNO
+Briqueteador: BRI
+Clapeta: CLH
+Clasificador: CIC, SAU, SDI, SES, SEO
+Compresor: CAT, CAP
+Criba: CCI, CHF, CAF, CIE, CLA, CRO, CSC, RGZ
+Electrico: UPS, GEO, CFC, ALU, GEL, IPR, PGE, SUB, TFO
+Electronico: PLC, VFD
+Elevador: ECA, SKH, TBO, THV
+Envasadora: ESS, ENV, ENR, ENO
+Equipo Movil: CPA, CPC, CRI, CAR, CVR, CFR, BUL, PAF, PAC, PSC, PMF, CCE, CVO, EXC, GRU, MON, MTC, RFE, RET, VUT
+Fluidizador: ASI, CAI, FCO, FTE, GNE, RBO, VNE, ATO
+Gas: RGA
+Herramienta: ESE, GRE, MHI, MIZ, QEN, SLU
+Hidratadora: HID
+Hidraulico: FHI, UHI, SDH
+Horno: HCI, HMZ, HRO, CHO, BHO, REF, EME
+Instrumentacion: PIR, STE, SNI, SPO, SGA, SPR, SAC, SPE
+Lavado: FPB, FPH, GBO, HLA, HIC, HCL, LTR, TDE, TES, TLA
+Manga Retractil: MRA, MRC
+Mezclador: MEZ
+Molino: CHA, MJA, MMA, MNA, MRS, MDR, MRO, MIH, MIV, MNO
+Molino Pulverizador: MBO, MTA, MPE, MVE, RGR
+Motor: MCI, MOT
+Muestreo: CUA, MAU, MUM
+Paletizado: APS, ELS, PAL
+Pesaje: BAS, BCA, PPB, TPE, TPS
+Quebradora: QCO, QDR, QIM, QQU, QRS, QSZ
+Refrigeracion: ACO, ERE, ICA, RVA, SAI
+Secado: GGC, SRO
+Seguridad: CEX, DCO, DFG, DGT, DME, DRU, DSE, EXT, FEM, IEM, LOJ, PMA, SOX, SCI, SIN, TAI
+Soplador: SHI, TUR, SLO
+Transportador: ABM, BDT, TRA, TRO, TPL, TVS, TFN, TVI
+Transportador Banda: TCT, TBA, TBC, TBH, TBL, TBF
+Transportador Helicoidal: THE, THM, THS
+Transporte Neumatico: TND, VEN
+Tuberia y Ductos: CHI, DUC, LAG, LAI, LGA, TTN
+Valvula: DIV, DRO, DUM, VBT, VDA, VCP, VDO, VGN, VGH, VMA, VMO, VPE, VPN, VRO, VTA, VTR, VAL, VMN
+Ventilador: VCE, VAP
+Edificaciones: EDM, ECO
+${knownCtx}
+
+══ ÁREAS DEL PLANO ══
+Lee los títulos de sección y asigna cada equipo al área donde está visualmente ubicado.
+
+Para CADA equipo extrae:
+- tag: identificador completo exacto como aparece en el plano
+- name: descripción según el catálogo y contexto
+- type: tipo según catálogo CALIDRA
+- clase: clase del activo según catálogo
+- area: sección del plano donde está ubicado
+- power: potencia anotada junto al equipo (HP o kW)
+- capacity: caudal/capacidad anotada (CFM, TPH, m3/h, etc.)
+- size: diámetro u dimensión anotada (pulgadas, mm, etc.)
+- pressure: presión si está indicada
+- temperature: temperatura si está indicada
+- material: material si está indicado
+- notes: otras anotaciones junto al equipo
+
+Responde SOLO con JSON válido sin texto ni backticks:
+{"equipment":[{"tag":"VCE-102","name":"Ventilador Centrifugo","type":"Ventilador Centrifugo","clase":"Ventilador","area":"Trituracion de Primaria","power":"10 HP","capacity":"3500 CFM","size":"10\" G.A.","pressure":"","temperature":"","material":"","notes":""}]}
+
+Extrae ABSOLUTAMENTE TODOS los equipos con TAG visible. Si un campo no está disponible usa "".`;
 }
 
+
+function buildEquipmentContext() {
+  try {
+    const known = localStorage.getItem('pid_equipment_catalog');
+    if (!known) return '';
+    const list = JSON.parse(known);
+    if (!list || !list.length) return '';
+    return '\nEQUIPOS CONOCIDOS (busca estos TAGs con prioridad):\n' +
+      list.slice(0, 50).map(e => `${e.tag}: ${e.name} (${e.type})`).join('\n');
+  } catch { return ''; }
+}
 // ════════════════════════
 // DXF MODE
 // ════════════════════════
@@ -733,38 +827,20 @@ function getTemplate(tag) {
 }
 
 function guessType(tag) {
-  const p = tag.split('-')[0].toUpperCase();
-  if (/^(PSV|PRV|RV)/.test(p)) return 'Válvula de Seguridad';
-  if (/^(VR)/.test(p)) return 'Válvula Rotatoria';
-  if (/^(HV|XV|MOV|AOV|CV|FCV|PCV|LCV)/.test(p)) return 'Válvula de Control';
-  if (/^(PI|PT|PIC|PDT|PSH|PSL)/.test(p)) return 'Instrumento de Presión';
-  if (/^(FI|FT|FIC|FM|FC)/.test(p)) return 'Medidor de Flujo';
-  if (/^(TI|TT|TIC|TE|TAH|TAL)/.test(p)) return 'Instrumento de Temperatura';
-  if (/^(LI|LT|LIC|LE|LSH|LSL)/.test(p)) return 'Instrumento de Nivel';
-  if (/^(AI|AT|AIC|AG)/.test(p)) return 'Analizador';
-  if (/^(P|PP)$/.test(p)) return 'Bomba';
-  if (/^(C|CP)$/.test(p)) return 'Compresor';
-  if (/^(E|HE)/.test(p)) return 'Intercambiador de Calor';
-  if (/^(V|VL)$/.test(p)) return 'Recipiente';
-  if (/^(T|TK)/.test(p)) return 'Tanque';
-  if (/^(M|MO)/.test(p)) return 'Motor';
-  if (/^(R|RX)/.test(p)) return 'Reactor';
-  if (/^(F|FL)$/.test(p)) return 'Filtro';
-  return 'Instrumento';
+  const prefix = tag.split('-')[0].toUpperCase();
+  if (typeof CONFIG !== 'undefined' && CONFIG.tagMapping) {
+    const found = CONFIG.tagMapping.find(e => e.prefix === prefix);
+    if (found) return found.type;
+  }
+  return 'Equipo';
 }
-
 function guessName(tag) {
-  const t = guessType(tag);
-  const n = tag.includes('-') ? tag.split('-').slice(1).join('-') : '';
-  const map = {
-    'Válvula Rotatoria':'Válvula Rotatoria','Bomba':'Bomba','Compresor':'Compresor',
-    'Intercambiador de Calor':'Intercambiador','Tanque':'Tanque','Recipiente':'Recipiente',
-    'Válvula de Control':'Válvula de Control','Válvula de Seguridad':'Válvula de Seguridad',
-    'Medidor de Flujo':'Medidor de Flujo','Instrumento de Presión':'Instrumento Presión',
-    'Instrumento de Temperatura':'Instrumento Temperatura','Instrumento de Nivel':'Instrumento Nivel',
-    'Analizador':'Analizador','Motor':'Motor','Reactor':'Reactor','Filtro':'Filtro','Instrumento':'Instrumento',
-  };
-  return ((map[t] || t) + ' ' + n).trim();
+  const prefix = tag.split('-')[0].toUpperCase();
+  if (typeof CONFIG !== 'undefined' && CONFIG.tagMapping) {
+    const found = CONFIG.tagMapping.find(e => e.prefix === prefix);
+    if (found) return found.type + ' ' + (tag.includes('-') ? tag.split('-').slice(1).join('-') : '');
+  }
+  return tag;
 }
 
 // ════════════════════════
@@ -783,6 +859,8 @@ function showResults() {
   }));
 
   SHARED.saveTags(tags);
+  localStorage.setItem('pid_analysis_timestamp', Date.now().toString());
+  localStorage.setItem('pid_analysis_filename', currentFile?.name || '');
 
   // Add to history
   SHARED.addToHistory({
@@ -808,6 +886,29 @@ function showResults() {
 }
 
 function goToValidation() {
+  // Detectar si hay equipos existentes en el proyecto activo
+  try {
+    const activeProject = JSON.parse(localStorage.getItem('pid_active_project') || 'null');
+    if (activeProject && activeProject.equipment && activeProject.equipment.length > 0) {
+      const existingTags = new Set(activeProject.equipment.map(e => e.tag));
+      const newTags      = analysisResult.filter(e => !existingTags.has(e.tag));
+      const missingTags  = activeProject.equipment.filter(e => !analysisResult.find(r => r.tag === e.tag));
+
+      if (newTags.length > 0 || missingTags.length > 0) {
+        let msg = `Comparación con proyecto "${activeProject.name}":
+
+`;
+        if (newTags.length)    msg += `✓ ${newTags.length} equipo(s) NUEVO(S) detectado(s)
+`;
+        if (missingTags.length) msg += `⚠ ${missingTags.length} equipo(s) no encontrado(s) en este plano
+`;
+        msg += '
+¿Continuar con la validación de TAGs?';
+        if (!confirm(msg)) return;
+      }
+    }
+  } catch(e) { console.warn('merge check error:', e); }
+
   window.location.href = '03_validar_tags.html';
 }
 
