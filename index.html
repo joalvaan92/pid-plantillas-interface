@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>P&ID Extractor — Inicio</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#0c0e14;--s1:#13161f;--s2:#1a1e2b;--s3:#222637;
+  --border:#252a3a;--border2:#333b52;
+  --teal:#00c9a7;--teal-lo:#00c9a712;--teal-mi:#00c9a730;
+  --amber:#f0a500;--amber-lo:#f0a50015;
+  --red:#ff4d6d;--red-lo:#ff4d6d15;
+  --green:#22c55e;--green-lo:#22c55e12;
+  --purple:#7f77dd;--purple-lo:#7f77dd12;
+  --txt:#dde3f0;--txt2:#7c87a0;--txt3:#424d64;
+  --mono:'IBM Plex Mono',monospace;--sans:'Syne',sans-serif;
+  --r:10px;--rlg:16px;
+}
+body{font-family:var(--sans);background:var(--bg);color:var(--txt);min-height:100vh;}
+
+/* grid bg */
+body::before{
+  content:'';position:fixed;inset:0;
+  background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);
+  background-size:48px 48px;opacity:.25;pointer-events:none;z-index:0;
+}
+
+/* HEADER */
+header{
+  background:var(--s1);border-bottom:1px solid var(--border);
+  padding:0 2rem;height:58px;
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:100;
+}
+.logo{display:flex;align-items:center;gap:10px;}
+.logo-mark{
+  width:32px;height:32px;background:var(--teal);border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:9px;font-weight:600;color:#0c0e14;line-height:1.2;text-align:center;
+}
+.logo-name{font-size:16px;font-weight:700;letter-spacing:-.3px;}
+.logo-company{font-family:var(--mono);font-size:10px;color:var(--teal);letter-spacing:2px;}
+
+.header-right{display:flex;align-items:center;gap:12px;}
+.user-pill{
+  display:flex;align-items:center;gap:8px;
+  background:var(--s2);border:1px solid var(--border);
+  border-radius:20px;padding:5px 14px 5px 8px;
+}
+.user-avatar{
+  width:26px;height:26px;border-radius:50%;
+  background:var(--teal-mi);
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;color:var(--teal);font-family:var(--mono);
+}
+.user-name{font-size:13px;font-weight:600;}
+.user-role{font-size:10px;color:var(--txt2);font-family:var(--mono);}
+.logout-btn{
+  background:none;border:1px solid var(--border);border-radius:8px;
+  color:var(--txt2);cursor:pointer;padding:6px 12px;font-family:var(--sans);
+  font-size:12px;transition:all .15s;
+}
+.logout-btn:hover{background:var(--red-lo);color:var(--red);border-color:var(--red);}
+
+/* MAIN */
+main{max-width:1100px;margin:0 auto;padding:2.5rem 2rem 4rem;position:relative;z-index:1;}
+
+.welcome{margin-bottom:2.5rem;}
+.welcome-title{font-size:28px;font-weight:800;letter-spacing:-1px;margin-bottom:4px;}
+.welcome-sub{font-size:14px;color:var(--txt2);}
+
+/* STATS ROW */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:2.5rem;}
+.stat-card{background:var(--s1);border:1px solid var(--border);border-radius:var(--rlg);padding:1.1rem 1.25rem;}
+.stat-num{font-family:var(--mono);font-size:28px;font-weight:600;display:block;margin-bottom:2px;}
+.stat-lbl{font-size:12px;color:var(--txt2);}
+.stat-card.c-teal   .stat-num{color:var(--teal);}
+.stat-card.c-amber  .stat-num{color:var(--amber);}
+.stat-card.c-green  .stat-num{color:var(--green);}
+.stat-card.c-purple .stat-num{color:var(--purple);}
+
+/* MODULE GRID */
+.section-title{font-size:13px;font-weight:600;color:var(--txt2);letter-spacing:1px;font-family:var(--mono);margin-bottom:1rem;}
+.modules-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:2.5rem;}
+
+.module-card{
+  background:var(--s1);border:1px solid var(--border);border-radius:var(--rlg);
+  padding:1.5rem;cursor:pointer;transition:all .2s;text-decoration:none;color:inherit;
+  display:flex;flex-direction:column;gap:12px;position:relative;overflow:hidden;
+}
+.module-card::before{
+  content:'';position:absolute;inset:0;opacity:0;transition:opacity .2s;
+  background:radial-gradient(circle at 20% 50%, var(--accent-lo,var(--teal-lo)), transparent 70%);
+}
+.module-card:hover{border-color:var(--border2);transform:translateY(-2px);}
+.module-card:hover::before{opacity:1;}
+
+.module-icon{
+  width:44px;height:44px;border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;flex-shrink:0;
+}
+.module-num{
+  font-family:var(--mono);font-size:10px;letter-spacing:2px;
+  margin-bottom:6px;
+}
+.module-name{font-size:18px;font-weight:700;letter-spacing:-.3px;margin-bottom:4px;}
+.module-desc{font-size:13px;color:var(--txt2);line-height:1.5;}
+.module-badge{
+  display:inline-block;font-family:var(--mono);font-size:10px;
+  padding:2px 8px;border-radius:4px;margin-top:4px;
+  background:var(--s3);color:var(--txt2);border:1px solid var(--border);
+}
+.module-arrow{
+  margin-left:auto;font-size:18px;color:var(--txt3);
+  transition:transform .2s, color .2s;
+}
+.module-card:hover .module-arrow{transform:translateX(4px);color:var(--txt2);}
+
+/* colors per module */
+.mod-plantillas{--accent-lo:var(--purple-lo);}
+.mod-plantillas .module-icon{background:var(--purple-lo);color:var(--purple);}
+.mod-plantillas .module-num{color:var(--purple);}
+
+.mod-pid{--accent-lo:var(--red-lo);}
+.mod-pid .module-icon{background:var(--red-lo);color:var(--red);}
+.mod-pid .module-num{color:var(--red);}
+
+.mod-tags{--accent-lo:var(--green-lo);}
+.mod-tags .module-icon{background:var(--green-lo);color:var(--green);}
+.mod-tags .module-num{color:var(--green);}
+
+.mod-equipos{--accent-lo:var(--amber-lo);}
+.mod-equipos .module-icon{background:var(--amber-lo);color:var(--amber);}
+.mod-equipos .module-num{color:var(--amber);}
+
+/* HISTORY */
+.history-section{background:var(--s1);border:1px solid var(--border);border-radius:var(--rlg);padding:1.5rem;}
+.history-empty{text-align:center;padding:2rem;color:var(--txt3);font-size:13px;}
+.history-row{
+  display:flex;align-items:center;gap:14px;
+  padding:.75rem 0;border-bottom:1px solid var(--border);
+}
+.history-row:last-child{border-bottom:none;}
+.history-dot{width:8px;height:8px;border-radius:50%;background:var(--teal);flex-shrink:0;}
+.history-file{font-family:var(--mono);font-size:12px;color:var(--teal);}
+.history-info{font-size:12px;color:var(--txt2);}
+.history-date{font-size:11px;color:var(--txt3);font-family:var(--mono);margin-left:auto;}
+
+@media(max-width:640px){
+  .stats-row{grid-template-columns:1fr 1fr;}
+  .modules-grid{grid-template-columns:1fr;}
+  main{padding:1.5rem 1rem 3rem;}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-mark">P&amp;<br>ID</div>
+    <div>
+      <div class="logo-name" id="hdr-app-name">P&ID Extractor</div>
+      <div class="logo-company" id="hdr-company">CALIDRA</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="user-pill">
+      <div class="user-avatar" id="user-avatar">—</div>
+      <div>
+        <div class="user-name" id="user-name">—</div>
+        <div class="user-role" id="user-role">—</div>
+      </div>
+    </div>
+    <button class="logout-btn" onclick="logout()">Cerrar sesión</button>
+  </div>
+</header>
+
+<main>
+  <div class="welcome">
+    <div class="welcome-title" id="welcome-msg">Bienvenido</div>
+    <div class="welcome-sub" id="welcome-date">—</div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-row">
+    <div class="stat-card c-teal">
+      <span class="stat-num" id="stat-planos">0</span>
+      <div class="stat-lbl">Planos analizados</div>
+    </div>
+    <div class="stat-card c-amber">
+      <span class="stat-num" id="stat-equipos">0</span>
+      <div class="stat-lbl">Equipos registrados</div>
+    </div>
+    <div class="stat-card c-green">
+      <span class="stat-num" id="stat-plantillas">0</span>
+      <div class="stat-lbl">Plantillas activas</div>
+    </div>
+    <div class="stat-card c-purple">
+      <span class="stat-num" id="stat-tags">0</span>
+      <div class="stat-lbl">TAGs confirmados</div>
+    </div>
+  </div>
+
+  <!-- MODULES -->
+  <div class="section-title">MÓDULOS DEL SISTEMA</div>
+  <div class="modules-grid">
+
+    <a href="01_plantillas.html" class="module-card mod-plantillas">
+      <div style="display:flex;align-items:flex-start;gap:14px;">
+        <div class="module-icon">⬡</div>
+        <div style="flex:1;">
+          <div class="module-num">MÓDULO 01</div>
+          <div class="module-name">Gestor de Plantillas</div>
+          <div class="module-desc">Administra las plantillas Excel por tipo de equipo. Conecta con tu repositorio de GitHub.</div>
+          <span class="module-badge">GitHub · Excel</span>
+        </div>
+        <div class="module-arrow">→</div>
+      </div>
+    </a>
+
+    <a href="02_subir_pid.html" class="module-card mod-pid">
+      <div style="display:flex;align-items:flex-start;gap:14px;">
+        <div class="module-icon">◈</div>
+        <div style="flex:1;">
+          <div class="module-num">MÓDULO 02</div>
+          <div class="module-name">Analizar P&ID</div>
+          <div class="module-desc">Sube la imagen de tu plano. Claude Vision extrae todos los equipos y datos técnicos.</div>
+          <span class="module-badge">Claude Vision · ~$0.03</span>
+        </div>
+        <div class="module-arrow">→</div>
+      </div>
+    </a>
+
+    <a href="03_validar_tags.html" class="module-card mod-tags">
+      <div style="display:flex;align-items:flex-start;gap:14px;">
+        <div class="module-icon">✓</div>
+        <div style="flex:1;">
+          <div class="module-num">MÓDULO 03</div>
+          <div class="module-name">Validar TAGs</div>
+          <div class="module-desc">Revisa los TAGs detectados. Acepta, rechaza o agrega manualmente los que falten.</div>
+          <span class="module-badge">Sin costo · Local</span>
+        </div>
+        <div class="module-arrow">→</div>
+      </div>
+    </a>
+
+    <a href="04_equipos.html" class="module-card mod-equipos">
+      <div style="display:flex;align-items:flex-start;gap:14px;">
+        <div class="module-icon">◎</div>
+        <div style="flex:1;">
+          <div class="module-num">MÓDULO 04</div>
+          <div class="module-name">Equipos y Excel</div>
+          <div class="module-desc">Lista completa de equipos confirmados. Edita y descarga el Excel con el formato de tu plantilla.</div>
+          <span class="module-badge">Sin costo · Exportar</span>
+        </div>
+        <div class="module-arrow">→</div>
+      </div>
+    </a>
+
+  </div>
+
+  <!-- HISTORY -->
+  <div class="section-title">ÚLTIMOS PLANOS ANALIZADOS</div>
+  <div class="history-section">
+    <div id="history-list"></div>
+  </div>
+
+</main>
+
+<script src="config.js"></script>
+<script src="shared.js"></script>
+<script>
+// Auth guard
+if (!SHARED.requireAuth()) { /* redirige solo */ }
+
+// Init UI
+const user = SHARED.currentUser();
+document.getElementById('hdr-app-name').textContent  = CONFIG.appName;
+document.getElementById('hdr-company').textContent   = CONFIG.company.toUpperCase();
+document.getElementById('user-avatar').textContent   = user.name.slice(0,2).toUpperCase();
+document.getElementById('user-name').textContent     = user.name;
+document.getElementById('user-role').textContent     = user.role === 'admin' ? 'Administrador' : 'Operador';
+document.getElementById('welcome-msg').textContent   = 'Hola, ' + user.name.split(' ')[0] + ' 👋';
+document.getElementById('welcome-date').textContent  =
+  new Date().toLocaleDateString('es-MX',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+
+// Stats
+const equipment  = SHARED.getEquipment();
+const tags       = SHARED.getTags();
+const templates  = SHARED.getTemplates();
+const history    = SHARED.getHistory();
+
+document.getElementById('stat-planos').textContent    = history.length;
+document.getElementById('stat-equipos').textContent   = equipment.length;
+document.getElementById('stat-plantillas').textContent= templates.length;
+document.getElementById('stat-tags').textContent      = tags.length;
+
+// History
+const listEl = document.getElementById('history-list');
+if (!history.length) {
+  listEl.innerHTML = '<div class="history-empty">Aún no hay planos analizados.<br>Comienza en el Módulo 02.</div>';
+} else {
+  listEl.innerHTML = history.slice(0,6).map(h => `
+    <div class="history-row">
+      <div class="history-dot"></div>
+      <div>
+        <div class="history-file">${SHARED.esc(h.filename || 'plano.png')}</div>
+        <div class="history-info">${h.tagCount || 0} TAGs · ${h.area || 'Sin área'}</div>
+      </div>
+      <div class="history-date">${SHARED.formatDate(h.date)}</div>
+    </div>
+  `).join('');
+}
+
+function logout() {
+  SHARED.clearSession();
+  window.location.href = 'login.html';
+}
+</script>
+</body>
+</html>

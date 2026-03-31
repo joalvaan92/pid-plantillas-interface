@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>P&ID — Gestor de Plantillas</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#0c0e14;--s1:#13161f;--s2:#1a1e2b;--s3:#222637;
+  --border:#252a3a;--border2:#333b52;
+  --teal:#00c9a7;--teal-lo:#00c9a712;--teal-mi:#00c9a730;
+  --amber:#f0a500;--amber-lo:#f0a50015;--amber-mi:#f0a50040;
+  --red:#ff4d6d;--red-lo:#ff4d6d15;--red-mi:#ff4d6d40;
+  --green:#22c55e;--green-lo:#22c55e12;--green-mi:#22c55e35;
+  --purple:#7f77dd;--purple-lo:#7f77dd12;--purple-mi:#7f77dd35;
+  --txt:#dde3f0;--txt2:#7c87a0;--txt3:#424d64;
+  --mono:'IBM Plex Mono',monospace;--sans:'Syne',sans-serif;
+  --r:10px;--rlg:16px;
+}
+body{font-family:var(--sans);background:var(--bg);color:var(--txt);min-height:100vh;}
+body::before{
+  content:'';position:fixed;inset:0;
+  background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);
+  background-size:48px 48px;opacity:.2;pointer-events:none;z-index:0;
+}
+
+/* ── HEADER ── */
+header{
+  background:var(--s1);border-bottom:1px solid var(--border);
+  padding:0 2rem;height:56px;display:flex;align-items:center;
+  justify-content:space-between;position:sticky;top:0;z-index:100;
+}
+.logo{display:flex;align-items:center;gap:10px;}
+.logo-mark{
+  width:30px;height:30px;background:var(--teal);border-radius:7px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:9px;font-weight:600;color:#0c0e14;line-height:1.2;text-align:center;
+}
+.logo-name{font-size:15px;font-weight:700;letter-spacing:-.3px;}
+.breadcrumb{
+  display:flex;align-items:center;gap:8px;
+  font-size:13px;color:var(--txt2);
+}
+.breadcrumb a{color:var(--txt2);text-decoration:none;transition:color .15s;}
+.breadcrumb a:hover{color:var(--txt);}
+.breadcrumb span{color:var(--txt3);}
+.breadcrumb strong{color:var(--purple);}
+.back-btn{
+  display:flex;align-items:center;gap:6px;
+  padding:7px 14px;border-radius:var(--r);border:1px solid var(--border);
+  background:transparent;color:var(--txt2);font-family:var(--sans);font-size:13px;
+  cursor:pointer;text-decoration:none;transition:all .15s;
+}
+.back-btn:hover{background:var(--s2);color:var(--txt);}
+
+/* ── MAIN ── */
+main{max-width:1000px;margin:0 auto;padding:2rem 2rem 5rem;position:relative;z-index:1;}
+
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:2rem;gap:1rem;flex-wrap:wrap;}
+.page-title{font-size:24px;font-weight:800;letter-spacing:-.5px;margin-bottom:4px;}
+.page-sub{font-size:14px;color:var(--txt2);}
+
+/* ── GITHUB STATUS ── */
+.gh-status{
+  background:var(--s1);border:1px solid var(--border);border-radius:var(--rlg);
+  padding:1.25rem 1.5rem;margin-bottom:1.5rem;
+  display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;
+}
+.gh-info{display:flex;align-items:center;gap:12px;}
+.gh-icon{
+  width:36px;height:36px;background:var(--purple-lo);border-radius:8px;
+  display:flex;align-items:center;justify-content:center;font-size:18px;
+}
+.gh-repo{font-family:var(--mono);font-size:13px;color:var(--purple);}
+.gh-desc{font-size:12px;color:var(--txt2);margin-top:2px;}
+.gh-badge{
+  font-family:var(--mono);font-size:10px;padding:3px 10px;border-radius:4px;
+  letter-spacing:1px;
+}
+.gh-badge.connected{background:var(--green-lo);color:var(--green);border:1px solid var(--green-mi);}
+.gh-badge.error{background:var(--red-lo);color:var(--red);border:1px solid var(--red-mi);}
+.gh-badge.loading{background:var(--s3);color:var(--txt2);border:1px solid var(--border);}
+
+.gh-actions{display:flex;gap:8px;}
+
+/* ── INFO BOX ── */
+.info-box{
+  border-radius:var(--r);padding:13px 18px;margin-bottom:1.5rem;
+  font-size:13px;line-height:1.7;display:none;
+}
+.info-box.show{display:block;}
+.info-box.amber{background:var(--amber-lo);border:1px solid var(--amber-mi);color:var(--txt2);}
+.info-box.amber strong{color:var(--amber);}
+.info-box.purple{background:var(--purple-lo);border:1px solid var(--purple-mi);color:var(--txt2);}
+.info-box.purple strong{color:var(--purple);}
+.info-box code{
+  font-family:var(--mono);font-size:11px;
+  background:var(--s3);padding:2px 6px;border-radius:4px;
+}
+
+/* ── STATUS BAR ── */
+.status-bar{
+  display:none;align-items:center;gap:12px;
+  background:var(--s1);border:1px solid var(--border);border-radius:var(--r);
+  padding:13px 18px;margin-bottom:1.5rem;
+}
+.status-bar.show{display:flex;}
+.spinner{
+  width:16px;height:16px;border:2px solid var(--border2);
+  border-top-color:var(--teal);border-radius:50%;
+  animation:spin .8s linear infinite;flex-shrink:0;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+.status-txt{font-family:var(--mono);font-size:12px;color:var(--txt2);}
+
+/* ── LAYOUT ── */
+.layout{display:grid;grid-template-columns:1fr 340px;gap:1.5rem;align-items:start;}
+
+/* ── PLANTILLAS LIST ── */
+.section-label{
+  font-family:var(--mono);font-size:10px;color:var(--txt3);
+  letter-spacing:1.5px;margin-bottom:12px;
+}
+.plantillas-list{display:flex;flex-direction:column;gap:10px;margin-bottom:1rem;}
+
+.plantilla-card{
+  background:var(--s1);border:1px solid var(--border);border-radius:var(--rlg);
+  padding:1.1rem 1.25rem;transition:border-color .15s;
+}
+.plantilla-card.active{border-color:var(--border2);}
+.p-header{display:flex;align-items:center;gap:12px;margin-bottom:10px;}
+.p-icon{
+  width:38px;height:38px;border-radius:8px;background:var(--purple-lo);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:10px;font-weight:600;color:var(--purple);
+  flex-shrink:0;
+}
+.p-name{font-size:14px;font-weight:700;flex:1;}
+.p-file{font-family:var(--mono);font-size:11px;color:var(--txt2);margin-top:2px;}
+.p-actions{display:flex;gap:6px;}
+
+.p-mapeos{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+.mapeo-chip{
+  font-family:var(--mono);font-size:11px;padding:3px 10px;border-radius:4px;
+  background:var(--teal-lo);color:var(--teal);border:1px solid var(--teal-mi);
+  cursor:default;
+}
+.mapeo-chip.unlinked{
+  background:var(--s3);color:var(--txt3);border-color:var(--border);
+}
+
+.p-source{
+  font-size:11px;color:var(--txt3);font-family:var(--mono);
+  margin-top:8px;display:flex;align-items:center;gap:6px;
+}
+.p-source-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.p-source-dot.github{background:var(--purple);}
+.p-source-dot.local{background:var(--amber);}
+
+.empty-list{
+  background:var(--s1);border:1px solid var(--border);border-radius:var(--rlg);
+  padding:3rem 2rem;text-align:center;color:var(--txt3);font-size:13px;
+}
+.empty-icon{font-size:36px;margin-bottom:1rem;opacity:.3;display:block;}
+
+/* ── RIGHT PANEL ── */
+.right-panel{display:flex;flex-direction:column;gap:1rem;}
+
+.panel-card{
+  background:var(--s1);border:1px solid var(--border);border-radius:var(--rlg);
+  padding:1.25rem;
+}
+.panel-title{font-size:14px;font-weight:700;margin-bottom:14px;letter-spacing:-.2px;}
+
+/* MAPEO FORM */
+.mapeo-form{display:flex;flex-direction:column;gap:10px;}
+.form-row{display:grid;grid-template-columns:90px 1fr;gap:8px;align-items:end;}
+.form-fld{display:flex;flex-direction:column;gap:4px;}
+.form-lbl{font-size:10px;color:var(--txt3);font-family:var(--mono);letter-spacing:.5px;}
+.form-in,.form-sel{
+  background:var(--bg);border:1px solid var(--border2);border-radius:var(--r);
+  padding:8px 11px;color:var(--txt);font-family:var(--mono);font-size:12px;
+  outline:none;transition:border-color .15s;width:100%;
+}
+.form-in:focus,.form-sel:focus{border-color:var(--purple);}
+.form-in::placeholder{color:var(--txt3);}
+.form-sel{appearance:none;cursor:pointer;}
+
+/* BUTTONS */
+.btn-primary{
+  padding:10px 20px;border-radius:var(--r);border:none;
+  background:var(--teal);color:#0c0e14;font-family:var(--sans);
+  font-size:13px;font-weight:700;cursor:pointer;transition:filter .15s;
+  width:100%;
+}
+.btn-primary:hover{filter:brightness(1.08);}
+.btn-primary.purple{background:var(--purple);}
+.btn-secondary{
+  padding:8px 16px;border-radius:var(--r);border:1px solid var(--border2);
+  background:transparent;color:var(--txt2);font-family:var(--sans);
+  font-size:12px;cursor:pointer;transition:all .15s;
+}
+.btn-secondary:hover{background:var(--s2);color:var(--txt);}
+.btn-icon{
+  width:32px;height:32px;border-radius:8px;border:1px solid var(--border);
+  background:transparent;color:var(--txt2);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;font-size:14px;
+  transition:all .15s;
+}
+.btn-icon:hover{background:var(--s2);color:var(--txt);}
+.btn-icon.danger:hover{background:var(--red-lo);color:var(--red);border-color:var(--red-mi);}
+
+/* UPLOAD ZONE */
+.upload-zone{
+  border:2px dashed var(--border2);border-radius:var(--rlg);
+  padding:1.5rem;text-align:center;cursor:pointer;transition:all .2s;position:relative;
+}
+.upload-zone:hover{border-color:var(--purple);background:var(--purple-lo);}
+.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;}
+.upload-icon{font-size:28px;opacity:.3;display:block;margin-bottom:8px;}
+.upload-txt{font-size:13px;color:var(--txt2);}
+.upload-sub{font-size:11px;color:var(--txt3);font-family:var(--mono);margin-top:4px;}
+
+/* MAPEO TABLE en panel */
+.mapeo-table{width:100%;border-collapse:collapse;font-size:12px;}
+.mapeo-table th{
+  text-align:left;padding:6px 8px;
+  font-family:var(--mono);font-size:10px;color:var(--txt3);
+  letter-spacing:1px;border-bottom:1px solid var(--border);
+}
+.mapeo-table td{padding:7px 8px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.mapeo-table tr:last-child td{border-bottom:none;}
+.mapeo-table tr:hover td{background:var(--s2);}
+.prefix-tag{
+  font-family:var(--mono);font-size:11px;font-weight:600;
+  padding:2px 8px;border-radius:4px;
+  background:var(--teal-lo);color:var(--teal);border:1px solid var(--teal-mi);
+}
+.del-mapeo{
+  background:none;border:none;color:var(--txt3);cursor:pointer;
+  font-size:14px;padding:2px 4px;transition:color .15s;
+}
+.del-mapeo:hover{color:var(--red);}
+
+/* GITHUB STEPS */
+.steps{display:flex;flex-direction:column;gap:10px;}
+.step-item{display:flex;gap:10px;align-items:flex-start;}
+.step-num{
+  width:22px;height:22px;border-radius:50%;background:var(--purple-lo);
+  border:1px solid var(--purple-mi);color:var(--purple);
+  font-family:var(--mono);font-size:10px;font-weight:600;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;
+}
+.step-txt{font-size:12px;color:var(--txt2);line-height:1.6;}
+.step-txt code{
+  font-family:var(--mono);font-size:11px;
+  background:var(--s3);padding:1px 5px;border-radius:3px;color:var(--teal);
+}
+.step-txt a{color:var(--purple);text-decoration:none;}
+.step-txt a:hover{text-decoration:underline;}
+
+::-webkit-scrollbar{width:5px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+@media(max-width:720px){.layout{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-mark">P&amp;<br>ID</div>
+    <div class="breadcrumb">
+      <a href="index.html">Inicio</a>
+      <span>›</span>
+      <strong>Módulo 01 — Plantillas</strong>
+    </div>
+  </div>
+  <a href="index.html" class="back-btn">← Inicio</a>
+</header>
+
+<main>
+  <div class="page-header">
+    <div>
+      <div class="page-title">Gestor de Plantillas</div>
+      <div class="page-sub">Administra las plantillas Excel por tipo de equipo y configura el mapeo de TAGs.</div>
+    </div>
+    <button class="btn-primary purple" style="width:auto;padding:10px 20px;" onclick="syncGitHub()">
+      ↻ Sincronizar GitHub
+    </button>
+  </div>
+
+  <!-- GitHub status -->
+  <div class="gh-status">
+    <div class="gh-info">
+      <div class="gh-icon">⬡</div>
+      <div>
+        <div class="gh-repo" id="gh-repo-url">—</div>
+        <div class="gh-desc" id="gh-repo-desc">Conectando…</div>
+      </div>
+    </div>
+    <div class="gh-actions">
+      <span class="gh-badge loading" id="gh-badge">VERIFICANDO</span>
+      <a id="gh-link" href="#" target="_blank" class="btn-secondary" style="text-decoration:none;">
+        Ver en GitHub ↗
+      </a>
+    </div>
+  </div>
+
+  <!-- Info boxes -->
+  <div class="info-box amber" id="no-repo-info">
+    <strong>⚠ Repositorio no encontrado.</strong> Para usar GitHub como gestor de plantillas necesitas crear el repositorio
+    <strong>pid-plantillas</strong> en tu cuenta. Sigue los pasos de la derecha. Mientras tanto puedes subir plantillas localmente.
+  </div>
+
+  <div class="info-box purple" id="how-to-info">
+    <strong>¿Cómo agregar plantillas desde GitHub?</strong><br>
+    Sube tus archivos <code>.xlsx</code> directamente al repositorio <code>joalvaan92/pid-plantillas</code> en la carpeta raíz.
+    La app los detecta automáticamente al sincronizar. El nombre del archivo define el tipo de equipo.
+  </div>
+
+  <!-- Status bar -->
+  <div class="status-bar" id="status-bar">
+    <div class="spinner"></div>
+    <span class="status-txt" id="status-txt">Conectando con GitHub…</span>
+  </div>
+
+  <div class="layout">
+
+    <!-- LEFT: plantillas list -->
+    <div>
+      <div class="section-label">PLANTILLAS DISPONIBLES</div>
+      <div class="plantillas-list" id="plantillas-list">
+        <div class="empty-list">
+          <span class="empty-icon">⬡</span>
+          Cargando plantillas…
+        </div>
+      </div>
+
+      <!-- Upload local -->
+      <div class="section-label" style="margin-top:1.5rem;">AGREGAR PLANTILLA LOCAL</div>
+      <div class="upload-zone" id="upload-zone">
+        <span class="upload-icon">+</span>
+        <div class="upload-txt">Arrastra un Excel aquí</div>
+        <div class="upload-sub">o haz clic para explorar · .xlsx</div>
+        <input type="file" id="file-input" accept=".xlsx" />
+      </div>
+    </div>
+
+    <!-- RIGHT: mapeo + github steps -->
+    <div class="right-panel">
+
+      <!-- Mapeo de TAGs -->
+      <div class="panel-card">
+        <div class="panel-title">Mapeo TAG → Plantilla</div>
+
+        <div class="mapeo-form">
+          <div class="form-row">
+            <div class="form-fld">
+              <div class="form-lbl">PREFIJO</div>
+              <input class="form-in" id="map-prefix" placeholder="VR" maxlength="6" />
+            </div>
+            <div class="form-fld">
+              <div class="form-lbl">PLANTILLA</div>
+              <select class="form-sel" id="map-template">
+                <option value="">Seleccionar…</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-fld">
+            <div class="form-lbl">TIPO DE EQUIPO</div>
+            <input class="form-in" id="map-type" placeholder="Válvula Rotatoria" />
+          </div>
+          <button class="btn-primary" onclick="addMapeo()">+ Agregar mapeo</button>
+        </div>
+
+        <div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:1rem;">
+          <table class="mapeo-table">
+            <thead>
+              <tr>
+                <th>PREFIJO</th>
+                <th>TIPO</th>
+                <th>PLANTILLA</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="mapeo-tbody"></tbody>
+          </table>
+        </div>
+        <button class="btn-primary" style="margin-top:1rem;background:var(--green);" onclick="saveMapeo()">
+          ✓ Guardar mapeo
+        </button>
+      </div>
+
+      <!-- GitHub steps -->
+      <div class="panel-card">
+        <div class="panel-title">Configurar repositorio GitHub</div>
+        <div class="steps">
+          <div class="step-item">
+            <div class="step-num">1</div>
+            <div class="step-txt">
+              Ve a <a href="https://github.com/new" target="_blank">github.com/new</a> y crea un repositorio llamado exactamente <code>pid-plantillas</code>. Márcalo como <strong>Público</strong>.
+            </div>
+          </div>
+          <div class="step-item">
+            <div class="step-num">2</div>
+            <div class="step-txt">
+              Sube tus archivos <code>.xlsx</code> directamente al repo. Puedes hacerlo desde la interfaz web de GitHub arrastrando los archivos.
+            </div>
+          </div>
+          <div class="step-item">
+            <div class="step-num">3</div>
+            <div class="step-txt">
+              Haz clic en <strong>↻ Sincronizar GitHub</strong> arriba. La app detecta los archivos automáticamente.
+            </div>
+          </div>
+          <div class="step-item">
+            <div class="step-num">4</div>
+            <div class="step-txt">
+              Configura el mapeo: qué prefijo de TAG usa cada plantilla. Eso es todo — no necesitas tocar código.
+            </div>
+          </div>
+        </div>
+        <a href="https://github.com/joalvaan92/pid-plantillas" target="_blank"
+           class="btn-primary purple" style="display:block;text-align:center;text-decoration:none;margin-top:1rem;">
+          Ir a joalvaan92/pid-plantillas- ↗
+        </a>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+<script src="config.js"></script>
+<script src="shared.js"></script>
+<script>
+// ════════════════════════
+// INIT
+// ════════════════════════
+if (!SHARED.requireAuth()) {}
+
+const GITHUB_API = `https://api.github.com/repos/${CONFIG.githubUser}/${CONFIG.githubRepo}/contents/`;
+const GITHUB_RAW = `https://raw.githubusercontent.com/${CONFIG.githubUser}/${CONFIG.githubRepo}/${CONFIG.githubBranch}/`;
+const REPO_URL   = `https://github.com/${CONFIG.githubUser}/${CONFIG.githubRepo}`;
+
+document.getElementById('gh-repo-url').textContent = `${CONFIG.githubUser}/${CONFIG.githubRepo}`;
+document.getElementById('gh-link').href = REPO_URL;
+
+// Load local state
+let plantillas = SHARED.getTemplates();         // [{name, file, source:'github'|'local', size, url}]
+let mapeo      = [...CONFIG.tagMapping];        // [{prefix, type, template}]
+
+// Try to load saved mapeo
+const savedMapeo = localStorage.getItem('pid_mapeo');
+if (savedMapeo) { try { mapeo = JSON.parse(savedMapeo); } catch{} }
+
+// ════════════════════════
+// GITHUB SYNC
+// ════════════════════════
+async function syncGitHub() {
+  setStatus(true, 'Conectando con GitHub…');
+  setBadge('loading', 'VERIFICANDO');
+
+  try {
+    // Paso 1: verificar que el repo EXISTE (endpoint del repo, no contents)
+    const REPO_META = `https://api.github.com/repos/${CONFIG.githubUser}/${CONFIG.githubRepo}`;
+    const repoRes   = await fetch(REPO_META, { headers: { 'Accept': 'application/vnd.github.v3+json' } });
+
+    if (repoRes.status === 404) {
+      setBadge('error', 'SIN REPO');
+      document.getElementById('no-repo-info').classList.add('show');
+      document.getElementById('gh-repo-desc').textContent = 'Repositorio no encontrado — créalo en GitHub';
+      setStatus(false);
+      renderPlantillas();
+      return;
+    }
+
+    if (!repoRes.ok) throw new Error('Error al verificar repo: ' + repoRes.status);
+
+    const repoMeta = await repoRes.json();
+    document.getElementById('no-repo-info').classList.remove('show');
+
+    // Paso 2: leer contenidos (puede ser vacío)
+    setStatus(true, 'Leyendo archivos del repositorio…');
+    const contentsRes = await fetch(GITHUB_API, { headers: { 'Accept': 'application/vnd.github.v3+json' } });
+
+    // 404 en contents = repo vacío (existe pero sin archivos)
+    if (contentsRes.status === 404 || contentsRes.status === 409) {
+      const local = plantillas.filter(p => p.source === 'local');
+      plantillas  = local;
+      SHARED.saveTemplates(plantillas);
+      setBadge('connected', 'REPO VACÍO');
+      document.getElementById('gh-repo-desc').textContent =
+        'Repositorio encontrado ✓ — aún sin archivos. Sube tu primer .xlsx al repo.';
+      setStatus(false);
+      renderPlantillas();
+      renderMapeoSelect();
+      SHARED.toast('Repo conectado — sube tus plantillas Excel a GitHub', 'info');
+      return;
+    }
+
+    if (!contentsRes.ok) throw new Error('Error al leer contenidos: ' + contentsRes.status);
+
+    const files      = await contentsRes.json();
+    const xlsxFiles  = Array.isArray(files)
+      ? files.filter(f => f.name.toLowerCase().endsWith('.xlsx'))
+      : [];
+
+    // Combina GitHub + local (mantiene los locales)
+    const local  = plantillas.filter(p => p.source === 'local');
+    const github = xlsxFiles.map(f => ({
+      name:   nameFromFile(f.name),
+      file:   f.name,
+      source: 'github',
+      size:   f.size,
+      url:    f.download_url,
+      sha:    f.sha,
+    }));
+
+    plantillas = [...github, ...local];
+    SHARED.saveTemplates(plantillas);
+
+    setBadge('connected', 'CONECTADO');
+    document.getElementById('gh-repo-desc').textContent =
+      `${xlsxFiles.length} plantilla${xlsxFiles.length !== 1 ? 's' : ''} encontrada${xlsxFiles.length !== 1 ? 's' : ''} · ${repoMeta.stargazers_count ?? 0} ★`;
+
+    setStatus(false);
+    renderPlantillas();
+    renderMapeoSelect();
+    SHARED.toast('GitHub sincronizado — ' + xlsxFiles.length + ' plantilla' + (xlsxFiles.length !== 1 ? 's' : ''), 'success');
+
+  } catch(err) {
+    setBadge('error', 'ERROR');
+    document.getElementById('gh-repo-desc').textContent = 'Error: ' + err.message;
+    setStatus(false);
+    renderPlantillas();
+    SHARED.toast('Error al conectar con GitHub: ' + err.message, 'error');
+    console.error('GitHub sync error:', err);
+  }
+}
+
+function nameFromFile(filename) {
+  return filename
+    .replace(/\.xlsx$/i, '')
+    .replace(/[-_]/g, ' ')
+    .replace(/\b\w/g, c => c.toUpperCase())
+    .trim();
+}
+
+// ════════════════════════
+// RENDER PLANTILLAS
+// ════════════════════════
+function renderPlantillas() {
+  const el = document.getElementById('plantillas-list');
+
+  if (!plantillas.length) {
+    el.innerHTML = `
+      <div class="empty-list">
+        <span class="empty-icon">⬡</span>
+        No hay plantillas aún.<br>
+        Sincroniza con GitHub o sube un archivo Excel.
+      </div>`;
+    return;
+  }
+
+  el.innerHTML = plantillas.map((p, i) => {
+    const linkedPrefixes = mapeo.filter(m => m.template === p.file);
+    const chips = linkedPrefixes.length
+      ? linkedPrefixes.map(m => `<span class="mapeo-chip">${esc(m.prefix)}-  →  ${esc(m.type)}</span>`).join('')
+      : `<span class="mapeo-chip unlinked">Sin mapeo de TAG aún</span>`;
+
+    const sizeKB = p.size ? (p.size / 1024).toFixed(1) + ' KB' : '';
+
+    return `
+    <div class="plantilla-card active">
+      <div class="p-header">
+        <div class="p-icon">${p.file.slice(0,2).toUpperCase()}</div>
+        <div style="flex:1;min-width:0;">
+          <div class="p-name">${esc(p.name)}</div>
+          <div class="p-file">${esc(p.file)} ${sizeKB ? '· ' + sizeKB : ''}</div>
+        </div>
+        <div class="p-actions">
+          ${p.url ? `<a href="${esc(p.url)}" download="${esc(p.file)}" class="btn-icon" title="Descargar">↓</a>` : ''}
+          ${p.source === 'local' ? `<button class="btn-icon danger" onclick="removeLocal(${i})" title="Eliminar">×</button>` : ''}
+        </div>
+      </div>
+      <div class="p-mapeos">${chips}</div>
+      <div class="p-source">
+        <div class="p-source-dot ${p.source}"></div>
+        ${p.source === 'github' ? 'Desde GitHub · ' + REPO_URL : 'Subida localmente'}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ════════════════════════
+// MAPEO
+// ════════════════════════
+function renderMapeoSelect() {
+  const sel = document.getElementById('map-template');
+  sel.innerHTML = '<option value="">Seleccionar…</option>' +
+    plantillas.map(p => `<option value="${esc(p.file)}">${esc(p.name)}</option>`).join('');
+}
+
+function renderMapeoTable() {
+  const tbody = document.getElementById('mapeo-tbody');
+  if (!mapeo.length) {
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--txt3);padding:1rem;font-size:12px;">Sin mapeos configurados</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = mapeo.map((m, i) => `
+    <tr>
+      <td><span class="prefix-tag">${esc(m.prefix)}-</span></td>
+      <td style="color:var(--txt2);font-size:12px;">${esc(m.type)}</td>
+      <td style="font-family:var(--mono);font-size:11px;color:var(--txt3);">${esc(m.template)}</td>
+      <td><button class="del-mapeo" onclick="deleteMapeo(${i})">×</button></td>
+    </tr>`).join('');
+}
+
+function addMapeo() {
+  const prefix   = document.getElementById('map-prefix').value.trim().toUpperCase();
+  const template = document.getElementById('map-template').value;
+  const type     = document.getElementById('map-type').value.trim();
+
+  if (!prefix || !template || !type) {
+    SHARED.toast('Completa todos los campos del mapeo', 'warning'); return;
+  }
+  if (mapeo.some(m => m.prefix.toUpperCase() === prefix)) {
+    SHARED.toast(`El prefijo "${prefix}" ya existe`, 'warning'); return;
+  }
+
+  mapeo.push({ prefix, type, template });
+  document.getElementById('map-prefix').value   = '';
+  document.getElementById('map-type').value     = '';
+  document.getElementById('map-template').value = '';
+  renderMapeoTable();
+  renderPlantillas();
+}
+
+function deleteMapeo(i) {
+  mapeo.splice(i, 1);
+  renderMapeoTable();
+  renderPlantillas();
+}
+
+function saveMapeo() {
+  // Save to localStorage AND update CONFIG in memory
+  localStorage.setItem('pid_mapeo', JSON.stringify(mapeo));
+  CONFIG.tagMapping = mapeo;
+  SHARED.toast('Mapeo guardado correctamente', 'success');
+  renderPlantillas();
+}
+
+// ════════════════════════
+// LOCAL UPLOAD
+// ════════════════════════
+const dropZone  = document.getElementById('upload-zone');
+const fileInput = document.getElementById('file-input');
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.style.borderColor = 'var(--purple)'; });
+dropZone.addEventListener('dragleave', () => { dropZone.style.borderColor = ''; });
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.style.borderColor = '';
+  if (e.dataTransfer.files[0]) addLocalFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', e => { if (e.target.files[0]) addLocalFile(e.target.files[0]); });
+
+function addLocalFile(file) {
+  if (!file.name.toLowerCase().endsWith('.xlsx')) {
+    SHARED.toast('Solo se aceptan archivos .xlsx', 'error'); return;
+  }
+  if (plantillas.some(p => p.file === file.name)) {
+    SHARED.toast(`"${file.name}" ya existe`, 'warning'); return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    plantillas.push({
+      name:   nameFromFile(file.name),
+      file:   file.name,
+      source: 'local',
+      size:   file.size,
+      url:    null,
+      data:   e.target.result,   // base64 para exportar después
+    });
+    SHARED.saveTemplates(plantillas);
+    renderPlantillas();
+    renderMapeoSelect();
+    SHARED.toast('Plantilla "' + file.name + '" agregada', 'success');
+    fileInput.value = '';
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeLocal(i) {
+  const name = plantillas[i].name;
+  plantillas.splice(i, 1);
+  SHARED.saveTemplates(plantillas);
+  renderPlantillas();
+  renderMapeoSelect();
+  SHARED.toast('"' + name + '" eliminada', 'info');
+}
+
+// ════════════════════════
+// UTILS
+// ════════════════════════
+function setStatus(show, txt) {
+  document.getElementById('status-bar').classList.toggle('show', show);
+  if (txt) document.getElementById('status-txt').textContent = txt;
+}
+function setBadge(type, txt) {
+  const b = document.getElementById('gh-badge');
+  b.className = 'gh-badge ' + type;
+  b.textContent = txt;
+}
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ════════════════════════
+// BOOT
+// ════════════════════════
+renderPlantillas();
+renderMapeoSelect();
+renderMapeoTable();
+
+// Auto-sync on load
+syncGitHub();
+</script>
+</body>
+</html>

@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>P&ID Extractor — Acceso</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#0c0e14;
+  --s1:#13161f;
+  --s2:#1a1e2b;
+  --border:#252a3a;
+  --border2:#333b52;
+  --teal:#00c9a7;
+  --teal-lo:#00c9a712;
+  --teal-mi:#00c9a740;
+  --red:#ff4d6d;
+  --red-lo:#ff4d6d18;
+  --txt:#dde3f0;
+  --txt2:#7c87a0;
+  --txt3:#424d64;
+  --mono:'IBM Plex Mono',monospace;
+  --sans:'Syne',sans-serif;
+}
+
+body{
+  font-family:var(--sans);
+  background:var(--bg);
+  color:var(--txt);
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:2rem;
+  position:relative;
+  overflow:hidden;
+}
+
+/* grid bg */
+body::before{
+  content:'';
+  position:absolute;
+  inset:0;
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size:48px 48px;
+  opacity:.35;
+}
+
+/* glow */
+body::after{
+  content:'';
+  position:absolute;
+  top:-200px;
+  left:50%;
+  transform:translateX(-50%);
+  width:600px;
+  height:600px;
+  background:radial-gradient(circle, #00c9a720 0%, transparent 70%);
+  pointer-events:none;
+}
+
+.login-wrap{
+  position:relative;
+  z-index:10;
+  width:100%;
+  max-width:420px;
+}
+
+/* logo */
+.brand{
+  text-align:center;
+  margin-bottom:2.5rem;
+}
+.brand-mark{
+  width:56px;height:56px;
+  background:var(--teal);
+  border-radius:14px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-family:var(--mono);
+  font-size:13px;
+  font-weight:600;
+  color:#0c0e14;
+  line-height:1.2;
+  text-align:center;
+  margin-bottom:1rem;
+}
+.brand-name{
+  font-size:26px;
+  font-weight:800;
+  letter-spacing:-1px;
+  display:block;
+}
+.brand-sub{
+  font-family:var(--mono);
+  font-size:11px;
+  color:var(--teal);
+  letter-spacing:3px;
+  margin-top:4px;
+  display:block;
+}
+
+/* card */
+.card{
+  background:var(--s1);
+  border:1px solid var(--border);
+  border-radius:20px;
+  padding:2rem;
+  backdrop-filter:blur(10px);
+}
+
+.card-title{
+  font-size:18px;
+  font-weight:700;
+  margin-bottom:1.75rem;
+  color:var(--txt);
+  letter-spacing:-.3px;
+}
+
+.field{
+  margin-bottom:1.25rem;
+}
+.field label{
+  display:block;
+  font-size:12px;
+  color:var(--txt2);
+  font-weight:600;
+  letter-spacing:.5px;
+  margin-bottom:7px;
+  font-family:var(--mono);
+}
+.field-wrap{
+  position:relative;
+}
+.field input{
+  width:100%;
+  background:var(--bg);
+  border:1px solid var(--border2);
+  border-radius:10px;
+  padding:12px 44px 12px 14px;
+  color:var(--txt);
+  font-family:var(--sans);
+  font-size:15px;
+  outline:none;
+  transition:border-color .15s, box-shadow .15s;
+}
+.field input:focus{
+  border-color:var(--teal);
+  box-shadow:0 0 0 3px var(--teal-lo);
+}
+.field input::placeholder{color:var(--txt3);}
+.field input.error{
+  border-color:var(--red);
+  box-shadow:0 0 0 3px var(--red-lo);
+}
+.eye{
+  position:absolute;
+  right:12px;top:50%;
+  transform:translateY(-50%);
+  background:none;border:none;
+  color:var(--txt3);cursor:pointer;
+  font-size:17px;padding:2px;
+  transition:color .15s;
+}
+.eye:hover{color:var(--txt2);}
+
+.error-msg{
+  display:none;
+  font-size:12px;
+  color:var(--red);
+  margin-top:6px;
+  font-family:var(--mono);
+}
+.error-msg.show{display:block;}
+
+.btn-login{
+  width:100%;
+  padding:13px;
+  border-radius:10px;
+  border:none;
+  background:var(--teal);
+  color:#0c0e14;
+  font-family:var(--sans);
+  font-size:15px;
+  font-weight:700;
+  cursor:pointer;
+  transition:filter .15s, transform .1s;
+  margin-top:.5rem;
+  letter-spacing:-.2px;
+}
+.btn-login:hover{filter:brightness(1.08);}
+.btn-login:active{transform:scale(.98);}
+.btn-login:disabled{opacity:.5;cursor:not-allowed;filter:none;}
+
+/* loading state */
+.btn-login .spinner{
+  display:none;
+  width:16px;height:16px;
+  border:2px solid #0c0e1460;
+  border-top-color:#0c0e14;
+  border-radius:50%;
+  animation:spin .7s linear infinite;
+  margin:0 auto;
+}
+.btn-login.loading .btn-txt{display:none;}
+.btn-login.loading .spinner{display:block;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* footer */
+.login-footer{
+  text-align:center;
+  margin-top:1.5rem;
+  font-size:12px;
+  color:var(--txt3);
+  font-family:var(--mono);
+}
+.login-footer span{color:var(--teal);}
+
+/* shake animation */
+@keyframes shake{
+  0%,100%{transform:translateX(0);}
+  20%{transform:translateX(-8px);}
+  40%{transform:translateX(8px);}
+  60%{transform:translateX(-6px);}
+  80%{transform:translateX(6px);}
+}
+.shake{animation:shake .4s ease;}
+
+/* version badge */
+.version{
+  position:fixed;
+  bottom:16px;right:16px;
+  font-family:var(--mono);
+  font-size:10px;
+  color:var(--txt3);
+  letter-spacing:1px;
+}
+</style>
+</head>
+<body>
+<div class="login-wrap">
+  <div class="brand">
+    <div class="brand-mark">P&amp;<br>ID</div>
+    <span class="brand-name" id="app-name">P&ID Extractor</span>
+    <span class="brand-sub">ACCESO AL SISTEMA</span>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Iniciar sesión</div>
+
+    <form onsubmit="handleLogin(event)">
+      <div class="field">
+        <label>USUARIO</label>
+        <div class="field-wrap">
+          <input
+            type="text"
+            id="username"
+            placeholder="tu usuario"
+            autocomplete="username"
+            autocapitalize="off"
+            spellcheck="false"
+          />
+        </div>
+      </div>
+
+      <div class="field">
+        <label>CONTRASEÑA</label>
+        <div class="field-wrap">
+          <input
+            type="password"
+            id="password"
+            placeholder="••••••••"
+            autocomplete="current-password"
+          />
+          <button type="button" class="eye" onclick="togglePwd()" id="eye-btn">👁</button>
+        </div>
+        <div class="error-msg" id="error-msg">Usuario o contraseña incorrectos</div>
+      </div>
+
+      <button type="submit" class="btn-login" id="login-btn">
+        <span class="btn-txt">Entrar</span>
+        <div class="spinner"></div>
+      </button>
+    </form>
+  </div>
+
+  <div class="login-footer">
+    <span id="company-name">Calidra</span> · P&amp;ID Extractor · v<span id="version">1.0.0</span>
+  </div>
+</div>
+
+<div class="version" id="version-badge">v1.0.0</div>
+
+<script src="config.js"></script>
+<script src="shared.js"></script>
+<script>
+// Init
+document.getElementById('app-name').textContent    = CONFIG.appName;
+document.getElementById('company-name').textContent = CONFIG.company;
+document.getElementById('version').textContent      = CONFIG.appVersion;
+document.getElementById('version-badge').textContent= 'v' + CONFIG.appVersion;
+
+// Si ya hay sesión activa → redirige directo
+if (SHARED.isSessionValid()) {
+  window.location.href = 'index.html';
+}
+
+// Focus en username al cargar
+window.addEventListener('load', () => {
+  document.getElementById('username').focus();
+});
+
+function togglePwd() {
+  const inp = document.getElementById('password');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+function setError(show) {
+  const msg   = document.getElementById('error-msg');
+  const uInp  = document.getElementById('username');
+  const pInp  = document.getElementById('password');
+  const card  = document.querySelector('.card');
+  msg.classList.toggle('show', show);
+  uInp.classList.toggle('error', show);
+  pInp.classList.toggle('error', show);
+  if (show) {
+    card.classList.add('shake');
+    setTimeout(() => card.classList.remove('shake'), 400);
+    pInp.value = '';
+    pInp.focus();
+  }
+}
+
+function handleLogin(e) {
+  e.preventDefault();
+  const btn  = document.getElementById('login-btn');
+  const user = document.getElementById('username').value.trim().toLowerCase();
+  const pass = document.getElementById('password').value;
+
+  if (!user || !pass) { setError(true); return; }
+
+  // Loading state
+  btn.classList.add('loading');
+  btn.disabled = true;
+  setError(false);
+
+  // Simula pequeño delay para sensación de proceso
+  setTimeout(() => {
+    const found = CONFIG.users.find(
+      u => u.username.toLowerCase() === user && u.password === pass
+    );
+
+    if (found) {
+      SHARED.setSession(found);
+      // Animación de éxito antes de redirigir
+      btn.style.background = '#22c55e';
+      btn.classList.remove('loading');
+      btn.querySelector('.btn-txt').style.display = 'block';
+      btn.querySelector('.btn-txt').textContent = '✓ Bienvenido, ' + found.name;
+      setTimeout(() => { window.location.href = 'index.html'; }, 700);
+    } else {
+      btn.classList.remove('loading');
+      btn.disabled = false;
+      setError(true);
+    }
+  }, 600);
+}
+</script>
+</body>
+</html>
