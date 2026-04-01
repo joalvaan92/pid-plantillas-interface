@@ -906,15 +906,38 @@ function showError(msg) {
 }
 
 function extractJSON(txt) {
-  // Strip markdown code fences if present (```json ... ``` or ``` ... ```)
-  const stripped = txt.replace(/^```[\w]*\n?/m, '').replace(/```\s*$/m, '').trim();
-  // Try full stripped text first
-  try { return JSON.parse(stripped); } catch(e) {}
-  // Try finding JSON object within text
-  const m = stripped.match(/\{[\s\S]*\}/);
-  if (m) { try { return JSON.parse(m[0]); } catch(e) {} }
-  // Try original
-  try { return JSON.parse(txt.trim()); } catch(e) {}
+  if (!txt) return null;
+  // Remove ALL markdown fences (global replace)
+  let clean = txt
+    .replace(/```json/gi, '')
+    .replace(/```/g, '')
+    .trim();
+  // Try parsing cleaned text directly
+  try { return JSON.parse(clean); } catch(e1) {}
+  // Find the first { and last } and try that
+  const first = clean.indexOf('{');
+  const last  = clean.lastIndexOf('}');
+  if (first !== -1 && last !== -1 && last > first) {
+    const jsonStr = clean.slice(first, last + 1);
+    try { return JSON.parse(jsonStr); } catch(e2) {
+      // JSON might be truncated - try to close it
+      try {
+        // Count open arrays/objects and close them
+        let fixed = jsonStr;
+        const openBrackets = (fixed.match(/\[/g)||[]).length - (fixed.match(/\]/g)||[]).length;
+        const openBraces   = (fixed.match(/\{/g)||[]).length - (fixed.match(/\}/g)||[]).length;
+        // Remove trailing incomplete entry
+        const lastComma = fixed.lastIndexOf(',');
+        const lastBrace = fixed.lastIndexOf('}');
+        if (lastComma > lastBrace) {
+          fixed = fixed.slice(0, lastComma);
+        }
+        for (let i = 0; i < openBrackets; i++) fixed += ']';
+        for (let i = 0; i < openBraces;   i++) fixed += '}';
+        return JSON.parse(fixed);
+      } catch(e3) {}
+    }
+  }
   return null;
 }
 
