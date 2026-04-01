@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>P&ID — Generar Datasheet</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<!-- SheetJS para Excel -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#0c0e14;--s1:#13161f;--s2:#1a1e2b;--s3:#222637;
+  --border:#252a3a;--border2:#333b52;
+  --teal:#00c9a7;--teal-lo:#00c9a712;--teal-mi:#00c9a730;
+  --amber:#f0a500;--amber-lo:#f0a50015;--amber-mi:#f0a50040;
+  --red:#ff4d6d;--red-lo:#ff4d6d15;--red-mi:#ff4d6d40;
+  --green:#22c55e;--green-lo:#22c55e12;--green-mi:#22c55e35;
+  --purple:#7f77dd;--purple-lo:#7f77dd12;--purple-mi:#7f77dd35;
+  --txt:#dde3f0;--txt2:#7c87a0;--txt3:#424d64;
+  --mono:'IBM Plex Mono',monospace;--sans:'Syne',sans-serif;
+  --r:10px;--rlg:16px;
+}
+body{font-family:var(--sans);background:var(--bg);color:var(--txt);min-height:100vh;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:48px 48px;opacity:.2;pointer-events:none;z-index:0;}
+
+header{background:var(--s1);border-bottom:1px solid var(--border);padding:0 2rem;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.logo{display:flex;align-items:center;gap:10px;}
+.logo-mark{width:30px;height:30px;background:var(--teal);border-radius:7px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:9px;font-weight:600;color:#0c0e14;line-height:1.2;text-align:center;}
+.breadcrumb{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--txt2);}
+.breadcrumb a{color:var(--txt2);text-decoration:none;}
+.breadcrumb a:hover{color:var(--txt);}
+.breadcrumb span{color:var(--txt3);}
+.breadcrumb strong{color:var(--green);}
+.hdr-right{display:flex;align-items:center;gap:8px;}
+.hdr-btn{padding:7px 14px;border-radius:var(--r);border:1px solid var(--border);background:transparent;color:var(--txt2);font-family:var(--sans);font-size:12px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:all .15s;}
+.hdr-btn:hover{background:var(--s2);color:var(--txt);}
+.hdr-btn.green{background:var(--green);border-color:var(--green);color:#0c0e14;font-weight:700;}
+.hdr-btn.green:hover{filter:brightness(1.08);}
+.hdr-btn.amber{background:var(--amber);border-color:var(--amber);color:#0c0e14;font-weight:700;}
+.hdr-btn.amber:hover{filter:brightness(1.08);}
+
+main{max-width:1100px;margin:0 auto;padding:2rem 2rem 5rem;position:relative;z-index:1;}
+
+/* LAYOUT */
+.ds-layout{display:grid;grid-template-columns:320px 1fr;gap:1.5rem;align-items:start;}
+
+/* EQUIPMENT LIST PANEL */
+.eq-panel{background:var(--s1);border:1px solid var(--border);border-radius:var(--rlg);overflow:hidden;position:sticky;top:72px;}
+.eq-panel-hdr{padding:1rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.eq-panel-title{font-size:14px;font-weight:700;}
+.eq-count{font-family:var(--mono);font-size:11px;color:var(--txt2);}
+.eq-search{padding:.75rem 1rem;border-bottom:1px solid var(--border);}
+.eq-search input{width:100%;background:var(--s2);border:1px solid var(--border2);border-radius:var(--r);padding:7px 12px;color:var(--txt);font-family:var(--sans);font-size:13px;outline:none;}
+.eq-search input:focus{border-color:var(--teal);}
+.eq-search input::placeholder{color:var(--txt3);}
+.eq-list{max-height:calc(100vh - 220px);overflow-y:auto;}
+.eq-item{padding:.75rem 1.25rem;cursor:pointer;transition:background .15s;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+.eq-item:hover{background:var(--s2);}
+.eq-item.active{background:var(--teal-lo);border-left:3px solid var(--teal);}
+.eq-item.done{border-left:3px solid var(--green);}
+.eq-tag{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--teal);min-width:80px;}
+.eq-item.done .eq-tag{color:var(--green);}
+.eq-item.active .eq-tag{color:var(--teal);}
+.eq-nm{font-size:12px;color:var(--txt2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.eq-ds-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.eq-ds-dot.done{background:var(--green);}
+.eq-ds-dot.pending{background:var(--border2);}
+
+/* DATASHEET FORM */
+.ds-form{background:var(--s1);border:1px solid var(--border);border-radius:var(--rlg);overflow:hidden;}
+.ds-form-hdr{padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;}
+.ds-eq-tag{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--teal);}
+.ds-eq-name{font-size:13px;color:var(--txt2);margin-top:2px;}
+.ds-form-actions{display:flex;gap:8px;}
+.btn-xl{padding:10px 22px;border-radius:var(--r);border:none;font-family:var(--sans);font-size:13px;font-weight:700;cursor:pointer;transition:filter .15s;display:flex;align-items:center;gap:6px;}
+.btn-xl.excel{background:#1f6e3f;color:#fff;}
+.btn-xl.excel:hover{filter:brightness(1.15);}
+.btn-xl.pdf{background:#c0392b;color:#fff;}
+.btn-xl.pdf:hover{filter:brightness(1.15);}
+.btn-xl.save{background:var(--teal);color:#0c0e14;}
+.btn-xl.save:hover{filter:brightness(1.08);}
+
+.ds-body{padding:1.5rem;}
+
+/* SECTION */
+.ds-sec{margin-bottom:1.75rem;}
+.ds-sec-title{font-family:var(--mono);font-size:10px;letter-spacing:2px;color:var(--txt3);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;}
+.ds-sec-dot{width:6px;height:6px;border-radius:50%;}
+.dot-purple{background:var(--purple);}
+.dot-teal{background:var(--teal);}
+.dot-amber{background:var(--amber);}
+.ds-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.ds-grid.cols3{grid-template-columns:1fr 1fr 1fr;}
+.ds-grp{display:flex;flex-direction:column;gap:4px;}
+.ds-grp.full{grid-column:1/-1;}
+.ds-lbl{font-size:11px;color:var(--txt2);}
+.ds-lbl.auto{color:var(--teal);}
+.ds-lbl.user{color:var(--amber);}
+.ds-lbl.gen{color:var(--purple);}
+.ds-in,.ds-sel,.ds-ta{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:9px 12px;color:var(--txt);font-family:var(--sans);font-size:13px;outline:none;transition:border-color .15s;width:100%;}
+.ds-in.mono{font-family:var(--mono);font-size:12px;}
+.ds-in:focus,.ds-sel:focus,.ds-ta:focus{border-color:var(--teal);}
+.ds-in.auto-val{border-color:var(--teal-mi);background:var(--teal-lo);}
+.ds-ta{resize:vertical;min-height:72px;}
+.ds-sel{appearance:none;cursor:pointer;}
+.ds-in[readonly]{opacity:.55;cursor:default;}
+
+/* CATALOG PHOTO */
+.cat-photo-box{border:1px solid var(--border);border-radius:var(--r);overflow:hidden;background:var(--s2);display:flex;align-items:center;justify-content:center;height:120px;}
+.cat-photo-box img{width:100%;height:120px;object-fit:cover;}
+.cat-photo-placeholder{font-size:32px;opacity:.2;}
+
+/* EMPTY / NO SELECTION */
+.no-sel{text-align:center;padding:5rem 2rem;color:var(--txt3);}
+.no-sel-icon{font-size:48px;opacity:.2;display:block;margin-bottom:1rem;}
+.no-sel-title{font-size:16px;font-weight:700;color:var(--txt2);margin-bottom:8px;}
+
+/* BULK EXPORT BAR */
+.bulk-bar{background:var(--s1);border:1px solid var(--border);border-radius:var(--rlg);padding:1rem 1.5rem;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;}
+.bulk-info{font-size:13px;color:var(--txt2);}
+.bulk-info strong{color:var(--txt);}
+.bulk-btns{display:flex;gap:8px;}
+
+/* LEGEND */
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:1.25rem;padding:.75rem 1rem;background:var(--s2);border-radius:var(--r);}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--txt2);}
+.legend-dot{width:7px;height:7px;border-radius:50%;}
+
+::-webkit-scrollbar{width:5px;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+@media(max-width:768px){.ds-layout{grid-template-columns:1fr;}.eq-panel{position:static;}.ds-grid{grid-template-columns:1fr;}.ds-grid.cols3{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">
+    <div class="logo-mark">P&amp;<br>ID</div>
+    <div class="breadcrumb">
+      <a href="index.html">Inicio</a><span>&#8250;</span>
+      <a href="04_equipos.html">Dashboard</a><span>&#8250;</span>
+      <strong>Modulo 05 &mdash; Datasheets</strong>
+    </div>
+  </div>
+  <div class="hdr-right">
+    <a href="04_equipos.html" class="hdr-btn">&#8592; Dashboard</a>
+    <button class="hdr-btn amber" onclick="exportAllExcel()">&#8595; Todos a Excel</button>
+    <button class="hdr-btn green" onclick="exportAllPDF()">&#8595; Todos a PDF</button>
+  </div>
+</header>
+
+<main>
+  <!-- BULK BAR -->
+  <div class="bulk-bar">
+    <div class="bulk-info" id="bulk-info">Cargando equipos...</div>
+    <div class="bulk-btns">
+      <button class="hdr-btn" onclick="exportAllExcel()" style="border-color:var(--amber-mi);color:var(--amber);">&#8595; Excel todos</button>
+      <button class="hdr-btn" onclick="exportAllPDF()" style="border-color:var(--green-mi);color:var(--green);">&#8595; PDF todos</button>
+    </div>
+  </div>
+
+  <div class="ds-layout">
+    <!-- LEFT: EQUIPMENT LIST -->
+    <div class="eq-panel">
+      <div class="eq-panel-hdr">
+        <div class="eq-panel-title">Equipos del proyecto</div>
+        <span class="eq-count" id="eq-count">0 equipos</span>
+      </div>
+      <div class="eq-search">
+        <input id="eq-search" placeholder="Buscar TAG..." oninput="filterEquipment()" />
+      </div>
+      <div class="eq-list" id="eq-list"></div>
+    </div>
+
+    <!-- RIGHT: DATASHEET FORM -->
+    <div class="ds-form" id="ds-form">
+      <div class="no-sel" id="no-sel">
+        <span class="no-sel-icon">&#9783;</span>
+        <div class="no-sel-title">Selecciona un equipo</div>
+        <p style="font-size:13px;">Haz clic en cualquier equipo de la lista para editar su datasheet.</p>
+      </div>
+      <div id="ds-content" style="display:none;">
+        <div class="ds-form-hdr">
+          <div>
+            <div class="ds-eq-tag" id="ds-tag">---</div>
+            <div class="ds-eq-name" id="ds-name">---</div>
+          </div>
+          <div class="ds-form-actions">
+            <button class="btn-xl save" onclick="saveDS()">&#10003; Guardar</button>
+            <button class="btn-xl excel" onclick="exportOneExcel()">&#8595; Excel</button>
+            <button class="btn-xl pdf" onclick="exportOnePDF()">&#8595; PDF</button>
+          </div>
+        </div>
+        <div class="ds-body">
+          <div class="legend">
+            <div class="legend-item"><div class="legend-dot" style="background:var(--purple)"></div>Datos del proyecto</div>
+            <div class="legend-item"><div class="legend-dot" style="background:var(--teal)"></div>Extraidos del P&ID (Claude)</div>
+            <div class="legend-item"><div class="legend-dot" style="background:var(--amber)"></div>Completa el ingeniero</div>
+          </div>
+
+          <!-- SECCIÓN 1: DATOS GENERALES DEL PROYECTO -->
+          <div class="ds-sec">
+            <div class="ds-sec-title"><div class="ds-sec-dot dot-purple"></div>DATOS GENERALES DEL PROYECTO</div>
+            <div class="ds-grid cols3">
+              <div class="ds-grp"><div class="ds-lbl gen">No. Proyecto</div><input class="ds-in mono" id="f-proj-num" readonly /></div>
+              <div class="ds-grp"><div class="ds-lbl gen">Cliente</div><input class="ds-in" id="f-proj-client" readonly /></div>
+              <div class="ds-grp"><div class="ds-lbl gen">Fecha</div><input class="ds-in" id="f-proj-date" readonly /></div>
+              <div class="ds-grp full"><div class="ds-lbl gen">Nombre del proyecto</div><input class="ds-in" id="f-proj-name" readonly /></div>
+              <div class="ds-grp"><div class="ds-lbl gen">Region / Planta</div><input class="ds-in" id="f-proj-region" readonly /></div>
+              <div class="ds-grp"><div class="ds-lbl gen">Ingeniero</div><input class="ds-in" id="f-proj-eng" readonly /></div>
+            </div>
+          </div>
+
+          <!-- SECCIÓN 2: DATOS DEL EQUIPO (Claude Vision) -->
+          <div class="ds-sec">
+            <div class="ds-sec-title"><div class="ds-sec-dot dot-teal"></div>DATOS DEL EQUIPO (EXTRAIDOS DEL P&ID)</div>
+            <div style="display:grid;grid-template-columns:1fr 120px;gap:10px;margin-bottom:10px;">
+              <div class="ds-grid" style="align-content:start;">
+                <div class="ds-grp"><div class="ds-lbl auto">TAG / Clave</div><input class="ds-in mono auto-val" id="f-tag" /></div>
+                <div class="ds-grp"><div class="ds-lbl auto">Tipo de equipo</div><input class="ds-in auto-val" id="f-type" /></div>
+                <div class="ds-grp full"><div class="ds-lbl auto">Nombre / Servicio</div><input class="ds-in auto-val" id="f-name" /></div>
+                <div class="ds-grp full"><div class="ds-lbl auto">Area / Zona</div><input class="ds-in auto-val" id="f-area" /></div>
+              </div>
+              <div>
+                <div class="ds-lbl auto" style="margin-bottom:6px;">Foto de referencia</div>
+                <div class="cat-photo-box" id="cat-photo-box">
+                  <span class="cat-photo-placeholder">&#128247;</span>
+                </div>
+                <div style="font-size:10px;color:var(--txt3);margin-top:4px;font-family:var(--mono);text-align:center;" id="cat-src"></div>
+              </div>
+            </div>
+            <div class="ds-grid cols3">
+              <div class="ds-grp"><div class="ds-lbl auto">Potencia</div><input class="ds-in mono auto-val" id="f-power" placeholder="15 HP" /></div>
+              <div class="ds-grp"><div class="ds-lbl auto">Capacidad</div><input class="ds-in mono auto-val" id="f-capacity" placeholder="150 TPH" /></div>
+              <div class="ds-grp"><div class="ds-lbl auto">Tamano</div><input class="ds-in mono auto-val" id="f-size" placeholder="48 in" /></div>
+              <div class="ds-grp"><div class="ds-lbl auto">Presion diseno</div><input class="ds-in mono auto-val" id="f-pressure" placeholder="10 bar" /></div>
+              <div class="ds-grp"><div class="ds-lbl auto">Temperatura diseno</div><input class="ds-in mono auto-val" id="f-temp" placeholder="150 C" /></div>
+              <div class="ds-grp"><div class="ds-lbl auto">Material</div><input class="ds-in auto-val" id="f-material" placeholder="Acero al carbon" /></div>
+            </div>
+          </div>
+
+          <!-- SECCIÓN 3: DESCRIPCIÓN DEL CATÁLOGO -->
+          <div class="ds-sec" id="sec-catalog">
+            <div class="ds-sec-title"><div class="ds-sec-dot dot-teal"></div>DESCRIPCION TECNICA (CATALOGO)</div>
+            <div class="ds-grid">
+              <div class="ds-grp"><div class="ds-lbl auto">Rango de potencia tipico</div><input class="ds-in mono auto-val" id="f-cat-power" readonly /></div>
+              <div class="ds-grp"><div class="ds-lbl auto">Rango de capacidad tipico</div><input class="ds-in mono auto-val" id="f-cat-cap" readonly /></div>
+              <div class="ds-grp"><div class="ds-lbl auto">Materiales comunes</div><input class="ds-in auto-val" id="f-cat-mat" readonly /></div>
+              <div class="ds-grp"><div class="ds-lbl auto">Vida util estimada</div><input class="ds-in mono auto-val" id="f-cat-life" readonly /></div>
+              <div class="ds-grp full"><div class="ds-lbl auto">Descripcion tecnica</div><textarea class="ds-ta auto-val" id="f-cat-desc" readonly rows="2"></textarea></div>
+              <div class="ds-grp full"><div class="ds-lbl auto">Proveedores sugeridos</div><input class="ds-in auto-val" id="f-cat-providers" readonly /></div>
+            </div>
+          </div>
+
+          <!-- SECCIÓN 4: DATOS DEL INGENIERO -->
+          <div class="ds-sec">
+            <div class="ds-sec-title"><div class="ds-sec-dot dot-amber"></div>DATOS DEL INGENIERO</div>
+            <div class="ds-grid cols3">
+              <div class="ds-grp"><div class="ds-lbl user">Densidad (ton/m3)</div><input class="ds-in mono" id="f-density" placeholder="1.2" /></div>
+              <div class="ds-grp"><div class="ds-lbl user">Abrasividad</div>
+                <select class="ds-sel" id="f-abrasion">
+                  <option value="">Seleccionar...</option>
+                  <option>No abrasivo</option>
+                  <option>Ligeramente abrasivo</option>
+                  <option>Moderadamente abrasivo</option>
+                  <option>Muy abrasivo</option>
+                </select>
+              </div>
+              <div class="ds-grp"><div class="ds-lbl user">Criticidad</div>
+                <select class="ds-sel" id="f-criticality">
+                  <option value="">Seleccionar...</option>
+                  <option value="alta">Alta</option>
+                  <option value="media">Media</option>
+                  <option value="baja">Baja</option>
+                </select>
+              </div>
+              <div class="ds-grp"><div class="ds-lbl user">Estado operativo</div>
+                <select class="ds-sel" id="f-status">
+                  <option value="activo">Activo</option>
+                  <option value="standby">Stand-by</option>
+                  <option value="mantenimiento">Mantenimiento</option>
+                  <option value="fuera-servicio">Fuera de servicio</option>
+                </select>
+              </div>
+              <div class="ds-grp"><div class="ds-lbl user">Frecuencia mantenimiento</div>
+                <select class="ds-sel" id="f-maint">
+                  <option value="">Seleccionar...</option>
+                  <option>Diario</option><option>Semanal</option><option>Mensual</option>
+                  <option>Trimestral</option><option>Semestral</option><option>Anual</option>
+                </select>
+              </div>
+              <div class="ds-grp"><div class="ds-lbl user">No. de serie / modelo</div><input class="ds-in mono" id="f-serial" placeholder="N/A" /></div>
+              <div class="ds-grp full"><div class="ds-lbl user">Proveedor asignado</div><input class="ds-in" id="f-vendor" placeholder="Nombre del proveedor" /></div>
+              <div class="ds-grp full"><div class="ds-lbl user">Notas / Observaciones</div><textarea class="ds-ta" id="f-notes" placeholder="Requerimientos especiales, observaciones de instalacion, documentos relacionados..."></textarea></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script src="config.js"></script>
+<script src="shared.js"></script>
+<script>
+if (!SHARED.requireAuth()) {}
+
+var equipment    = [];
+var activeEqId   = null;
+var activeProject = null;
+var catalog      = [];
+
+// ════════════════════════
+// INIT
+// ════════════════════════
+function init() {
+  try { activeProject = JSON.parse(localStorage.getItem('pid_active_project') || 'null'); } catch(e) {}
+  try { catalog       = JSON.parse(localStorage.getItem('pid_catalog') || '[]'); } catch(e) {}
+
+  // Load equipment from active project
+  var projectEq = activeProject ? (activeProject.equipment || []) : [];
+  var sharedEq  = SHARED.getEquipment();
+
+  if (sharedEq.length > 0) {
+    var existingIds = projectEq.map(function(e){ return e.id; });
+    var newEqs = sharedEq.filter(function(e){ return existingIds.indexOf(e.id) === -1; });
+    equipment = projectEq.concat(newEqs);
+    saveToProject();
+    SHARED.saveEquipment([]);
+  } else {
+    equipment = projectEq;
+  }
+
+  renderEquipmentList();
+  updateBulkBar();
+
+  if (equipment.length > 0) {
+    selectEquipment(equipment[0].id);
+  }
+}
+
+function saveToProject() {
+  if (!activeProject) return;
+  activeProject.equipment = equipment;
+  localStorage.setItem('pid_active_project', JSON.stringify(activeProject));
+  var projects = JSON.parse(localStorage.getItem('pid_projects') || '[]');
+  var idx = projects.findIndex(function(p){ return p.id === activeProject.id; });
+  if (idx > -1) { projects[idx] = activeProject; localStorage.setItem('pid_projects', JSON.stringify(projects)); }
+}
+
+// ════════════════════════
+// EQUIPMENT LIST
+// ════════════════════════
+function renderEquipmentList() {
+  var search = (document.getElementById('eq-search').value || '').toLowerCase();
+  var filtered = equipment.filter(function(eq) {
+    return !search || eq.tag.toLowerCase().indexOf(search) > -1 ||
+           (eq.name||'').toLowerCase().indexOf(search) > -1;
+  });
+  document.getElementById('eq-count').textContent = equipment.length + ' equipos';
+  var html = filtered.map(function(eq) {
+    var isCurrent = eq.id === activeEqId;
+    var isDone    = eq.dsGenerated;
+    var cls       = 'eq-item' + (isCurrent ? ' active' : '') + (isDone ? ' done' : '');
+    return '<div class="' + cls + '" onclick="selectEquipment(\'' + eq.id + '\')">' +
+      '<div class="eq-tag">' + esc(eq.tag) + '</div>' +
+      '<div class="eq-nm">' + esc(eq.name || eq.type || '---') + '</div>' +
+      '<div class="eq-ds-dot ' + (isDone ? 'done' : 'pending') + '"></div>' +
+    '</div>';
+  }).join('');
+  document.getElementById('eq-list').innerHTML = html ||
+    '<div style="padding:2rem;text-align:center;color:var(--txt3);font-size:13px;">Sin resultados</div>';
+}
+
+function filterEquipment() { renderEquipmentList(); }
+
+function updateBulkBar() {
+  var total  = equipment.length;
+  var done   = equipment.filter(function(e){ return e.dsGenerated; }).length;
+  var pName  = activeProject ? activeProject.name : 'Sin proyecto';
+  document.getElementById('bulk-info').innerHTML =
+    '<strong>' + pName + '</strong> &mdash; ' +
+    total + ' equipos &mdash; ' +
+    '<span style="color:var(--green)">' + done + ' datasheets generados</span>' +
+    ' &mdash; <span style="color:var(--amber)">' + (total-done) + ' pendientes</span>';
+}
+
+// ════════════════════════
+// SELECT EQUIPMENT
+// ════════════════════════
+function selectEquipment(id) {
+  activeEqId = id;
+  var eq = equipment.find(function(e){ return e.id === id; });
+  if (!eq) return;
+
+  document.getElementById('no-sel').style.display = 'none';
+  document.getElementById('ds-content').style.display = '';
+  renderEquipmentList();
+
+  // Header
+  document.getElementById('ds-tag').textContent  = eq.tag;
+  document.getElementById('ds-name').textContent = eq.name || eq.type || '---';
+
+  // Project fields (readonly)
+  var p = activeProject || {};
+  document.getElementById('f-proj-num').value    = p.num    || '---';
+  document.getElementById('f-proj-client').value = p.client || '---';
+  document.getElementById('f-proj-date').value   = p.date   || new Date().toLocaleDateString('es-MX');
+  document.getElementById('f-proj-name').value   = p.name   || '---';
+  document.getElementById('f-proj-region').value = p.region || '---';
+  document.getElementById('f-proj-eng').value    = p.engineer || '---';
+
+  // Claude Vision fields
+  document.getElementById('f-tag').value      = eq.tag      || '';
+  document.getElementById('f-type').value     = eq.type     || '';
+  document.getElementById('f-name').value     = eq.name     || '';
+  document.getElementById('f-area').value     = eq.area     || '';
+  document.getElementById('f-power').value    = eq.power    || '';
+  document.getElementById('f-capacity').value = eq.capacity || '';
+  document.getElementById('f-size').value     = eq.size     || '';
+  document.getElementById('f-pressure').value = eq.pressure || '';
+  document.getElementById('f-temp').value     = eq.temperature || '';
+  document.getElementById('f-material').value = eq.material || '';
+
+  // Catalog data
+  var catItem = findCatalogItem(eq.tag);
+  if (catItem) {
+    document.getElementById('f-cat-power').value     = catItem.powerRange || '';
+    document.getElementById('f-cat-cap').value       = catItem.capRange   || '';
+    document.getElementById('f-cat-mat').value       = catItem.materials  || '';
+    document.getElementById('f-cat-life').value      = catItem.lifeYears  || '';
+    document.getElementById('f-cat-desc').value      = catItem.desc       || '';
+    var provs = (catItem.providers || []).map(function(p){ return p.name || p; }).filter(Boolean);
+    document.getElementById('f-cat-providers').value = provs.join(' | ') || '';
+
+    // Photo
+    var photoSrc = catItem.photoB64 || catItem.photoUrl || '';
+    var photoBox = document.getElementById('cat-photo-box');
+    if (photoSrc) {
+      photoBox.innerHTML = '<img src="' + photoSrc + '" alt="' + esc(catItem.name) + '" onerror="this.parentElement.innerHTML=\'<span class=cat-photo-placeholder>&#128247;</span>\'" />';
+      document.getElementById('cat-src').textContent = catItem.prefix + ' - Catalogo';
+    } else {
+      photoBox.innerHTML = '<span class="cat-photo-placeholder">&#128247;</span>';
+      document.getElementById('cat-src').textContent = 'Sin foto en catalogo';
+    }
+    document.getElementById('sec-catalog').style.display = '';
+  } else {
+    document.getElementById('sec-catalog').style.display = 'none';
+  }
+
+  // User fields
+  document.getElementById('f-density').value     = eq.density     || '';
+  document.getElementById('f-abrasion').value    = eq.abrasion    || '';
+  document.getElementById('f-criticality').value = eq.criticality || '';
+  document.getElementById('f-status').value      = eq.status      || 'activo';
+  document.getElementById('f-maint').value       = eq.maintenance || '';
+  document.getElementById('f-serial').value      = eq.serial      || '';
+  document.getElementById('f-vendor').value      = eq.vendor      || '';
+  document.getElementById('f-notes').value       = eq.notes       || '';
+}
+
+function findCatalogItem(tag) {
+  var prefix = tag.split('-')[0].toUpperCase();
+  return catalog.find(function(c){ return c.prefix === prefix; }) || null;
+}
+
+// ════════════════════════
+// SAVE
+// ════════════════════════
+function saveDS() {
+  var eq = equipment.find(function(e){ return e.id === activeEqId; });
+  if (!eq) return;
+  eq.tag         = document.getElementById('f-tag').value;
+  eq.type        = document.getElementById('f-type').value;
+  eq.name        = document.getElementById('f-name').value;
+  eq.area        = document.getElementById('f-area').value;
+  eq.power       = document.getElementById('f-power').value;
+  eq.capacity    = document.getElementById('f-capacity').value;
+  eq.size        = document.getElementById('f-size').value;
+  eq.pressure    = document.getElementById('f-pressure').value;
+  eq.temperature = document.getElementById('f-temp').value;
+  eq.material    = document.getElementById('f-material').value;
+  eq.density     = document.getElementById('f-density').value;
+  eq.abrasion    = document.getElementById('f-abrasion').value;
+  eq.criticality = document.getElementById('f-criticality').value;
+  eq.status      = document.getElementById('f-status').value;
+  eq.maintenance = document.getElementById('f-maint').value;
+  eq.serial      = document.getElementById('f-serial').value;
+  eq.vendor      = document.getElementById('f-vendor').value;
+  eq.notes       = document.getElementById('f-notes').value;
+  saveToProject();
+  SHARED.toast(eq.tag + ' guardado', 'success');
+  renderEquipmentList();
+}
+
+// ════════════════════════
+// BUILD DATASHEET DATA
+// ════════════════════════
+function buildDSData(eq) {
+  var p       = activeProject || {};
+  var catItem = findCatalogItem(eq.tag);
+  var provs   = catItem ? (catItem.providers||[]).map(function(p){ return p.name||p; }).filter(Boolean).join(' | ') : '';
+  return {
+    // Project
+    projNum:     p.num     || '',
+    projName:    p.name    || '',
+    client:      p.client  || '',
+    region:      p.region  || '',
+    engineer:    p.engineer|| '',
+    date:        p.date    || new Date().toLocaleDateString('es-MX'),
+    // Equipment
+    tag:         eq.tag         || '',
+    type:        eq.type        || '',
+    name:        eq.name        || '',
+    area:        eq.area        || '',
+    power:       eq.power       || '',
+    capacity:    eq.capacity    || '',
+    size:        eq.size        || '',
+    pressure:    eq.pressure    || '',
+    temperature: eq.temperature || '',
+    material:    eq.material    || '',
+    // Catalog
+    catDesc:     catItem ? (catItem.desc       || '') : '',
+    catPower:    catItem ? (catItem.powerRange  || '') : '',
+    catCap:      catItem ? (catItem.capRange    || '') : '',
+    catMat:      catItem ? (catItem.materials   || '') : '',
+    catLife:     catItem ? (catItem.lifeYears   || '') : '',
+    providers:   provs,
+    // User
+    density:     eq.density     || '',
+    abrasion:    eq.abrasion    || '',
+    criticality: eq.criticality || '',
+    status:      eq.status      || '',
+    maintenance: eq.maintenance || '',
+    serial:      eq.serial      || '',
+    vendor:      eq.vendor      || '',
+    notes:       eq.notes       || '',
+  };
+}
+
+// ════════════════════════
+// EXCEL EXPORT
+// ════════════════════════
+function buildExcelRows(d) {
+  return [
+    ['DATASHEET DE EQUIPO', '', '', ''],
+    ['', '', '', ''],
+    ['DATOS GENERALES DEL PROYECTO', '', '', ''],
+    ['No. Proyecto',     d.projNum,    'Cliente',     d.client],
+    ['Nombre',           d.projName,   'Fecha',       d.date],
+    ['Region / Planta',  d.region,     'Ingeniero',   d.engineer],
+    ['', '', '', ''],
+    ['DATOS DEL EQUIPO (P&ID)', '', '', ''],
+    ['TAG',              d.tag,        'Tipo',        d.type],
+    ['Nombre / Servicio',d.name,       'Area',        d.area],
+    ['Potencia',         d.power,      'Capacidad',   d.capacity],
+    ['Tamano',           d.size,       'Presion',     d.pressure],
+    ['Temperatura',      d.temperature,'Material',    d.material],
+    ['', '', '', ''],
+    ['DESCRIPCION TECNICA (CATALOGO)', '', '', ''],
+    ['Descripcion',      d.catDesc,    '', ''],
+    ['Potencia tipica',  d.catPower,   'Capacidad tipica', d.catCap],
+    ['Materiales',       d.catMat,     'Vida util',   d.catLife],
+    ['Proveedores',      d.providers,  '', ''],
+    ['', '', '', ''],
+    ['DATOS DEL INGENIERO', '', '', ''],
+    ['Densidad (ton/m3)',d.density,    'Abrasividad', d.abrasion],
+    ['Criticidad',       d.criticality,'Estado',      d.status],
+    ['Mant. frecuencia', d.maintenance,'No. Serie',   d.serial],
+    ['Proveedor asignado', d.vendor,   '', ''],
+    ['Notas',            d.notes,      '', ''],
+  ];
+}
+
+function exportOneExcel() {
+  saveDS();
+  var eq = equipment.find(function(e){ return e.id === activeEqId; });
+  if (!eq) return;
+  var d    = buildDSData(eq);
+  var rows = buildExcelRows(d);
+  var wb   = XLSX.utils.book_new();
+  var ws   = XLSX.utils.aoa_to_sheet(rows);
+
+  // Style column widths
+  ws['!cols'] = [{wch:28},{wch:30},{wch:28},{wch:30}];
+
+  XLSX.utils.book_append_sheet(wb, ws, eq.tag);
+  XLSX.writeFile(wb, 'DS_' + eq.tag + '_' + (activeProject ? activeProject.num : 'PRY') + '.xlsx');
+
+  eq.dsGenerated = true;
+  eq.dsDate = new Date().toLocaleDateString('es-MX');
+  saveToProject();
+  renderEquipmentList();
+  updateBulkBar();
+  SHARED.toast('Datasheet ' + eq.tag + ' exportado a Excel', 'success');
+}
+
+function exportAllExcel() {
+  if (!equipment.length) { SHARED.toast('No hay equipos', 'warning'); return; }
+  var wb = XLSX.utils.book_new();
+  equipment.forEach(function(eq) {
+    var d    = buildDSData(eq);
+    var rows = buildExcelRows(d);
+    var ws   = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{wch:28},{wch:30},{wch:28},{wch:30}];
+    var sheetName = eq.tag.replace(/[\\\/\?\*\[\]:]/g, '').slice(0,31);
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    eq.dsGenerated = true;
+    eq.dsDate = new Date().toLocaleDateString('es-MX');
+  });
+  var projNum = activeProject ? activeProject.num : 'PRY';
+  XLSX.writeFile(wb, 'Datasheets_' + projNum + '_' + new Date().toLocaleDateString('es-MX').replace(/\//g,'-') + '.xlsx');
+  saveToProject();
+  renderEquipmentList();
+  updateBulkBar();
+  SHARED.toast(equipment.length + ' datasheets exportados', 'success');
+}
+
+// ════════════════════════
+// PDF EXPORT
+// ════════════════════════
+function buildPDFHTML(d, catItem) {
+  var photoHtml = '';
+  if (catItem && (catItem.photoB64 || catItem.photoUrl)) {
+    var src = catItem.photoB64 || catItem.photoUrl;
+    photoHtml = '<img src="' + src + '" style="width:100%;max-height:120px;object-fit:contain;" />';
+  }
+
+  return '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>DS ' + d.tag + '</title>' +
+  '<style>' +
+  'body{font-family:Arial,sans-serif;font-size:10px;margin:0;padding:16px;color:#1a1a2e;}' +
+  'h1{font-size:14px;margin:0 0 2px;color:#00836e;}' +
+  'h2{font-size:10px;background:#1a1a2e;color:#fff;padding:4px 8px;margin:10px 0 4px;text-transform:uppercase;letter-spacing:1px;}' +
+  '.header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #00836e;padding-bottom:8px;margin-bottom:10px;}' +
+  '.logo-txt{font-size:18px;font-weight:900;color:#00836e;}' +
+  'table{width:100%;border-collapse:collapse;margin-bottom:4px;}' +
+  'td{padding:3px 6px;border:1px solid #ddd;vertical-align:top;}' +
+  'td:first-child{font-weight:600;background:#f5f5f5;width:30%;}' +
+  '.photo-box{width:110px;text-align:center;border:1px solid #ddd;padding:4px;}' +
+  '.two-col{display:grid;grid-template-columns:1fr 110px;gap:10px;}' +
+  '@media print{body{padding:8px;}}' +
+  '</style></head><body>' +
+  '<div class="header">' +
+    '<div><div class="logo-txt">CALIDRA</div><div style="font-size:8px;color:#888;">DATASHEET DE EQUIPO</div></div>' +
+    '<div style="text-align:right;"><div style="font-size:16px;font-weight:900;color:#00836e;">' + d.tag + '</div>' +
+    '<div style="font-size:9px;color:#555;">' + d.type + '</div>' +
+    '<div style="font-size:8px;color:#888;">' + d.projNum + ' &mdash; ' + d.date + '</div></div>' +
+  '</div>' +
+  '<h2>Datos Generales del Proyecto</h2>' +
+  '<table><tr><td>No. Proyecto</td><td>' + d.projNum + '</td><td>Cliente</td><td>' + d.client + '</td></tr>' +
+  '<tr><td>Nombre</td><td>' + d.projName + '</td><td>Fecha</td><td>' + d.date + '</td></tr>' +
+  '<tr><td>Region / Planta</td><td>' + d.region + '</td><td>Ingeniero</td><td>' + d.engineer + '</td></tr></table>' +
+  '<h2>Datos del Equipo (P&ID)</h2>' +
+  '<div class="two-col"><div>' +
+  '<table><tr><td>TAG</td><td>' + d.tag + '</td><td>Tipo</td><td>' + d.type + '</td></tr>' +
+  '<tr><td>Nombre / Servicio</td><td colspan="3">' + d.name + '</td></tr>' +
+  '<tr><td>Area</td><td colspan="3">' + d.area + '</td></tr>' +
+  '<tr><td>Potencia</td><td>' + d.power + '</td><td>Capacidad</td><td>' + d.capacity + '</td></tr>' +
+  '<tr><td>Tamano</td><td>' + d.size + '</td><td>Presion</td><td>' + d.pressure + '</td></tr>' +
+  '<tr><td>Temperatura</td><td>' + d.temperature + '</td><td>Material</td><td>' + d.material + '</td></tr></table>' +
+  '</div><div class="photo-box">' + (photoHtml || '<div style="height:80px;display:flex;align-items:center;justify-content:center;color:#ccc;">Sin foto</div>') + '</div></div>' +
+  (d.catDesc ? '<h2>Descripcion Tecnica</h2><table><tr><td>Descripcion</td><td colspan="3">' + d.catDesc + '</td></tr>' +
+  '<tr><td>Potencia tipica</td><td>' + d.catPower + '</td><td>Capacidad tipica</td><td>' + d.catCap + '</td></tr>' +
+  '<tr><td>Materiales</td><td>' + d.catMat + '</td><td>Vida util</td><td>' + d.catLife + '</td></tr>' +
+  '<tr><td>Proveedores</td><td colspan="3">' + d.providers + '</td></tr></table>' : '') +
+  '<h2>Datos del Ingeniero</h2>' +
+  '<table><tr><td>Densidad (ton/m3)</td><td>' + d.density + '</td><td>Abrasividad</td><td>' + d.abrasion + '</td></tr>' +
+  '<tr><td>Criticidad</td><td>' + d.criticality + '</td><td>Estado</td><td>' + d.status + '</td></tr>' +
+  '<tr><td>Mant. frecuencia</td><td>' + d.maintenance + '</td><td>No. Serie</td><td>' + d.serial + '</td></tr>' +
+  '<tr><td>Proveedor asignado</td><td colspan="3">' + d.vendor + '</td></tr>' +
+  (d.notes ? '<tr><td>Notas</td><td colspan="3">' + d.notes + '</td></tr>' : '') +
+  '</table></body></html>';
+}
+
+function exportOnePDF() {
+  saveDS();
+  var eq = equipment.find(function(e){ return e.id === activeEqId; });
+  if (!eq) return;
+  var d       = buildDSData(eq);
+  var catItem = findCatalogItem(eq.tag);
+  var html    = buildPDFHTML(d, catItem);
+
+  var win = window.open('', '_blank', 'width=900,height=700');
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+  setTimeout(function(){ win.print(); }, 500);
+
+  eq.dsGenerated = true;
+  eq.dsDate = new Date().toLocaleDateString('es-MX');
+  saveToProject();
+  renderEquipmentList();
+  updateBulkBar();
+  SHARED.toast('Datasheet ' + eq.tag + ' listo para imprimir', 'success');
+}
+
+function exportAllPDF() {
+  if (!equipment.length) { SHARED.toast('No hay equipos', 'warning'); return; }
+  equipment.forEach(function(eq, i) {
+    setTimeout(function() {
+      var d       = buildDSData(eq);
+      var catItem = findCatalogItem(eq.tag);
+      var html    = buildPDFHTML(d, catItem);
+      var win = window.open('', '_blank', 'width=900,height=700');
+      win.document.write(html);
+      win.document.close();
+      eq.dsGenerated = true;
+      eq.dsDate = new Date().toLocaleDateString('es-MX');
+    }, i * 800);
+  });
+  setTimeout(function(){
+    saveToProject();
+    renderEquipmentList();
+    updateBulkBar();
+    SHARED.toast(equipment.length + ' datasheets generados', 'success');
+  }, equipment.length * 800);
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+init();
+</script>
+</body>
+</html>
